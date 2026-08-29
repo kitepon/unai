@@ -28,6 +28,8 @@ else
 fi
 
 SKILL_SRC="$SRC_DIR/skills/unai"
+CLI_SRC="$SRC_DIR/bin/unai.mjs"
+CLI_TARGET="$HOME/.local/bin/unai"
 TARGETS=(
   "$HOME/.claude/skills/unai"
   "$HOME/.codex/skills/unai"
@@ -43,6 +45,10 @@ if [ "${1:-}" = "--uninstall" ]; then
       echo "外した: $t"
     fi
   done
+  if [ -L "$CLI_TARGET" ]; then
+    rm "$CLI_TARGET"
+    echo "外した: $CLI_TARGET"
+  fi
   echo "完了。実体 ($SRC_DIR) は残っている。不要なら削除してよい。"
   exit 0
 fi
@@ -62,5 +68,13 @@ for t in "${TARGETS[@]}"; do
   ln -sfn "$SKILL_SRC" "$t"
   echo "繋いだ: $t -> $SKILL_SRC"
 done
+
+mkdir -p "$(dirname "$CLI_TARGET")"
+if [ -e "$CLI_TARGET" ] && [ ! -L "$CLI_TARGET" ]; then
+  echo "skip: $CLI_TARGET （実ファイルがあるため上書きしない）"
+else
+  ln -sfn "$CLI_SRC" "$CLI_TARGET"
+  echo "繋いだ: $CLI_TARGET -> $CLI_SRC"
+fi
 
 echo "完了。更新はこの1行の再実行でよい。"

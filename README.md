@@ -54,10 +54,23 @@ claude plugin install unai@unai
 curl -fsSL https://raw.githubusercontent.com/kitepon/unai/main/install.sh | bash
 ```
 
+Windows nativeではPowerShell 7から実行します。
+
+```powershell
+irm https://raw.githubusercontent.com/kitepon/unai/main/install.ps1 | iex
+```
+
 各ホストの部品置き場（`~/.claude/skills/unai` 等）へ繋ぎ込みます。導入していないホストは自動で飛ばします。更新は同じ1行の再実行。外すときは:
 
 ```bash
 bash ~/.local/share/unai/install.sh --uninstall
+```
+
+installerは`unai` CLIも`~/.local/bin`へ配置します。版数と工場向けread-only診断は次の入口です。
+
+```bash
+unai --version
+unai factory-diagnostics --json
 ```
 
 ## 使い方

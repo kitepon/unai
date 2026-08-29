@@ -40,7 +40,20 @@ Codex / Grok / Cursor (also fine for Claude Code):
 curl -fsSL https://raw.githubusercontent.com/kitepon/unai/main/install.sh | bash
 ```
 
+On native Windows, run the PowerShell 7 installer:
+
+```powershell
+irm https://raw.githubusercontent.com/kitepon/unai/main/install.ps1 | iex
+```
+
 Re-run the same line to update. Uninstall: `bash ~/.local/share/unai/install.sh --uninstall`
+
+The installer also places the `unai` CLI in `~/.local/bin`. It exposes the version and a read-only factory diagnostic:
+
+```bash
+unai --version
+unai factory-diagnostics --json
+```
 
 ## Usage
 

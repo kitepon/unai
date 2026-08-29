@@ -7,5 +7,7 @@ unaiは規範文書のプロジェクトです。コードよりも「日本語�
 - **規則の追加・変更のPR**: 核（core-pass.md）への追加は「複数の実例で再現する癖」だけを対象にしてください。一度きりの好みは声の設定（voice profile）の領分です
 - インストーラの不具合はIssueへ。OS・ホスト（Claude Code / Codex / Grok / Cursor）を添えてください
 
+コード・installerを変更した場合は、提出前に`node --test tests/unai.test.mjs`を実行してください。
+
 セキュリティに関わる報告（install.shの脆弱性など）は公開Issueへ書かず、
 [SECURITY.md](SECURITY.md) の非公開報告窓口を使ってください。

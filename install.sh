@@ -12,7 +12,11 @@ DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/unai"
 # skillの実体の場所を決める。repo内から実行されたらその場を使い、
 # パイプ実行なら DATA_DIR へ取得してから続きを行う。
 SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-/dev/null}")" 2>/dev/null && pwd || true)"
-if [ -n "$SELF_DIR" ] && [ -f "$SELF_DIR/skills/unai/SKILL.md" ]; then
+if [ -n "$SELF_DIR" ] && [ "$SELF_DIR" = "$DATA_DIR" ]; then
+  # 利用者用の複製の中から再実行された場合も、公開版から最新を取り直す
+  git -C "$DATA_DIR" pull --ff-only
+  SRC_DIR="$DATA_DIR"
+elif [ -n "$SELF_DIR" ] && [ -f "$SELF_DIR/skills/unai/SKILL.md" ]; then
   SRC_DIR="$SELF_DIR"
 else
   if [ -d "$DATA_DIR/.git" ]; then

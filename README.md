@@ -1,5 +1,8 @@
 <p align="center"><img src=".github/og.png" alt="unai — 日本語からAIっぽさを取り除く" width="100%"></p>
 
+<p align="center"><a href="https://kitepon.dev/#systems"><img src=".github/kitepon-dev-on-night.png" alt="kitepon.dev" width="180"></a></p>
+<p align="center"><strong>kitepon.dev の AI Development System</strong></p>
+
 # unai — 日本語文章からAIっぽさを取り除く
 
 > AIが書いた日本語の「AIっぽさ」を診断し、最小限の手直しで人の文章にするagent skill。Claude Code / Codex / Grok / Cursorで動く。
@@ -113,3 +116,7 @@ flowchart LR
 ## ライセンス
 
 MIT
+
+## サポートとセキュリティ
+
+使い方や不具合は [GitHub Issues](https://github.com/kitepon/unai/issues) へ。脆弱性の報告は公開Issueへ書かず、[セキュリティポリシー](SECURITY.md) に従ってください。

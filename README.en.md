@@ -1,5 +1,8 @@
 <p align="center"><img src=".github/og.png" alt="unai — strip AI flavor from Japanese text" width="100%"></p>
 
+<p align="center"><a href="https://kitepon.dev/en/#systems"><img src=".github/kitepon-dev-on-night.png" alt="kitepon.dev" width="180"></a></p>
+<p align="center"><strong>A kitepon.dev AI Development System</strong></p>
+
 # unai — strip AI flavor from Japanese text
 
 > An agent skill that diagnoses "AI-ness" in Japanese prose written by AI and removes it with minimal edits. Works on Claude Code, Codex, Grok, and Cursor.
@@ -60,3 +63,7 @@ De-AI'd text still needs *your* voice. Put your first-person choice, sentence en
 ## License
 
 MIT
+
+## Support and security
+
+Use [GitHub Issues](https://github.com/kitepon/unai/issues) for usage questions and bug reports. Do not disclose vulnerabilities in a public issue; follow the [security policy](SECURITY.md) instead.

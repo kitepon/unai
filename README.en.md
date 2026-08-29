@@ -1,3 +1,5 @@
+<p align="center"><img src=".github/og.png" alt="unai — strip AI flavor from Japanese text" width="100%"></p>
+
 # unai — strip AI flavor from Japanese text
 
 > An agent skill that diagnoses "AI-ness" in Japanese prose written by AI and removes it with minimal edits. Works on Claude Code, Codex, Grok, and Cursor.

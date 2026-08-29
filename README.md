@@ -1,3 +1,5 @@
+<p align="center"><img src=".github/og.png" alt="unai — 日本語からAIっぽさを取り除く" width="100%"></p>
+
 # unai — 日本語文章からAIっぽさを取り除く
 
 > AIが書いた日本語の「AIっぽさ」を診断し、最小限の手直しで人の文章にするagent skill。Claude Code / Codex / Grok / Cursorで動く。
@@ -85,6 +87,19 @@ AIっぽさを消した後に「どんな声で書くか」はあなた自身の
 ```
 
 書き方の詳細は [skills/unai/references/voice-profile.md](skills/unai/references/voice-profile.md)。
+
+## 仕組み
+
+```mermaid
+flowchart LR
+    A[対象の文章] --> B{操作}
+    B -->|review| C[診断だけ<br>逐語引用つきで指摘]
+    B -->|refactor| D[該当箇所だけ最小修正]
+    B -->|write| E[最初から規範を守って執筆]
+    F[核: 日本語AI指紋の禁則] --> B
+    G[文書種の追加規則<br>返答・報告など] --> B
+    H[声の設定 voice.md<br>あなたの一人称・語尾・禁句] -->|核より優先| B
+```
 
 ## 構成
 

@@ -66,12 +66,23 @@ Write the article following unai.
 Choose how broadly it applies:
 
 1. **On demand** (default): installing does nothing by itself; it works only when invoked as above
-2. **Always-on for one project**: add the line below to that project's instruction file (`CLAUDE.md` / `AGENTS.md`) — it then applies automatically, but only inside that folder (e.g. just your blog repo)
-3. **Always-on everywhere**: add the same line to the host's global instructions (e.g. `~/.claude/CLAUDE.md`)
+2. **Always-on for one project**: add the line below to that project's instruction file — it then applies automatically, but only inside that folder (e.g. just your blog repo)
+3. **Always-on everywhere**: add the same line to the host's global instructions
 
 ```
 文章・返答の文体はunai skillの規範に従う。
 ```
+
+Where the line goes, per host:
+
+| Host | One project (2) | Everywhere (3) |
+|---|---|---|
+| Claude Code | `CLAUDE.md` | `~/.claude/CLAUDE.md` |
+| Codex | `AGENTS.md` | `~/.codex/AGENTS.md` |
+| Grok Build | `AGENTS.md` | `~/.grok/rules/AGENTS.md` |
+| Cursor | `AGENTS.md` or `.cursor/rules/` | a rules file under `~/.cursor/rules/` |
+
+Locations can vary by host version; if these don't match, check your host's docs for its instruction/rules file location.
 
 ## Voice profile
 

@@ -1,0 +1,12 @@
+{
+  "name": "unai",
+  "version": "0.1.0",
+  "description": "un-AI Japanese writing: strip AI flavor from Japanese text. Diagnose (review), minimally fix (refactor), or apply while writing (write). Core fingerprint rules + per-domain overlays + user voice profiles.",
+  "author": {
+    "name": "kitepon"
+  },
+  "homepage": "https://github.com/kitepon/unai",
+  "repository": "https://github.com/kitepon/unai",
+  "license": "MIT",
+  "keywords": ["japanese", "writing", "de-ai", "humanizer", "style"]
+}

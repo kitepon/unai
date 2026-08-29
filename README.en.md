@@ -63,7 +63,11 @@ unai factory-diagnostics --json
 Write the article following unai.
 ```
 
-To apply to every assistant reply, add one line to your global instructions (e.g. `~/.claude/CLAUDE.md`):
+Choose how broadly it applies:
+
+1. **On demand** (default): installing does nothing by itself; it works only when invoked as above
+2. **Always-on for one project**: add the line below to that project's instruction file (`CLAUDE.md` / `AGENTS.md`) — it then applies automatically, but only inside that folder (e.g. just your blog repo)
+3. **Always-on everywhere**: add the same line to the host's global instructions (e.g. `~/.claude/CLAUDE.md`)
 
 ```
 文章・返答の文体はunai skillの規範に従う。

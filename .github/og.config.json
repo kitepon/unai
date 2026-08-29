@@ -1,0 +1,20 @@
+{
+  "base": "og-art.png",
+  "logo": "kitepon-dev-on-night.png",
+  "output": "og.png",
+  "social_preview": {
+    "output": "social-preview.jpg",
+    "quality": 90
+  },
+  "title": "unai",
+  "canvas": {
+    "width": 1280,
+    "height": 640
+  },
+  "endorsement": {
+    "x": 72,
+    "y": 40,
+    "width": 160,
+    "height": 48
+  }
+}

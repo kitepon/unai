@@ -1,15 +1,37 @@
-<p align="center"><img src=".github/og.png" alt="unai — 日本語からAIっぽさを取り除く" width="100%"></p>
+<p align="center">
+  <img src=".github/og.png" alt="unai — 均一に刷られた文章から該当箇所だけを直し、書き手の声を戻す夜の印刷工房" width="100%">
+  <br>
+  <sub><em>均一に刷られた文章の中から必要な箇所だけを直し、書き手の声を戻す世界を表しています。</em></sub>
+</p>
 
-<p align="center"><a href="https://kitepon.dev/#systems"><img src=".github/kitepon-dev-on-night.png" alt="kitepon.dev" width="180"></a></p>
-<p align="center"><strong>kitepon.dev の AI Development System</strong></p>
+# unai
 
-# unai — 日本語文章からAIっぽさを取り除く
+[![CI](https://github.com/kitepon/unai/actions/workflows/ci.yml/badge.svg)](https://github.com/kitepon/unai/actions/workflows/ci.yml)
+[![GitHub release](https://img.shields.io/github/v/release/kitepon/unai?color=24292e&logo=github)](https://github.com/kitepon/unai/releases)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-> AIが書いた日本語の「AIっぽさ」を診断し、最小限の手直しで人の文章にするagent skill。Claude Code / Codex / Grok / Cursorで動く。
+**日本語** · [English](README.en.md)
 
-[English](README.en.md)
+> **AIが書いた日本語に、書き手を戻す。**
+> unaiは、AI文章の癖を診断し、文章全体を書き直さず、該当箇所だけを最小修正するagent skillです。Claude Code、Codex、Grok、Cursorで動きます。
 
-英語圏には同種の道具がありますが、いずれも英語のAIの癖を対象にしています。日本語のAIの癖は英語と別物なので、unaiは日本語専用に作られています。
+[kitepon.dev](https://kitepon.dev/#systems)所属の[クオ](https://x.com/QLyun35332)が開発・運営しています。
+
+## 30秒でできること
+
+```text
+/unai review 下書き.md        # 問題箇所を診断する。文章は変更しない
+/unai refactor 下書き.md      # 該当箇所だけを最小修正する
+記事を書いて。unaiに従って     # 執筆時から規範を適用する
+```
+
+`review`は根拠と逐語引用を返し、`refactor`は指摘した箇所だけを直します。全文を別の文章へ
+作り替えないので、元の主張、情報、構成、書き手の癖を残せます。
+
+## なぜ日本語専用なのか
+
+英語圏の同種ツールは、英語のAI文章に現れる癖を対象にしています。日本語には別の語彙、構文、
+距離感、感情表現があるため、英語向けの規則を翻訳せず、日本語の実例から校正规範を作っています。
 
 | | unai | [sepia](https://github.com/Nanako0129/sepia) | [humanizer](https://github.com/blader/humanizer) |
 |---|---|---|---|

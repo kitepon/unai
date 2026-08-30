@@ -146,6 +146,45 @@ unai --version
 unai factory-diagnostics --json
 ```
 
+### Read-only factory diagnostics contract
+
+`factory-diagnostics --json` inspects only unai's own manifests, runtime, and skill bundle. When the diagnostic runs, it writes one line of JSON to stdout for both ready and not-ready results.
+
+```json
+{
+  "schema": "unai.native_factory_diagnostics.v1",
+  "product": { "name": "unai", "version": "0.2.1" },
+  "checks": {
+    "manifest_consistency": "pass",
+    "node_runtime": "pass",
+    "skill_bundle": "pass"
+  },
+  "overall": "ready"
+}
+```
+
+The only top-level fields are `schema`, `product`, `checks`, and `overall`.
+
+| Field | Contract |
+|---|---|
+| `schema` | Always `unai.native_factory_diagnostics.v1` |
+| `product` | `name` is `unai`; `version` is the SemVer from the plugin manifest |
+| `checks` | Exactly `manifest_consistency`, `node_runtime`, and `skill_bundle` |
+| Check status | Each value is `pass` or `fail`; there is no top-level `status` field |
+| `overall` | `ready` when all three checks pass; otherwise `not_ready` |
+
+- `manifest_consistency`: the names, versions, and source in the plugin and marketplace manifests agree
+- `node_runtime`: the running Node.js satisfies `package.json`'s `engines.node` (currently `>=22.13`)
+- `skill_bundle`: the distributed skill and its required references are readable
+
+| Exit | stdout / stderr | Meaning |
+|---|---|---|
+| `0` | Diagnostic JSON on stdout | `overall: "ready"` |
+| `1` | Diagnostic JSON on stdout | `overall: "not_ready"` |
+| `2` | Usage on stderr; no diagnostic JSON | Invalid arguments |
+
+The diagnostic neither reads nor emits prose under review, usage history, absolute paths, or secrets.
+
 ## Usage
 
 ```

@@ -8,16 +8,19 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { diagnose } from '../lib/diagnostics.mjs';
+import { supportsNodeRuntime } from '../lib/diagnostics.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-test('versionとnative diagnosticsがmanifestに一致する', async () => {
+test('versionとready diagnosticsがmanifestに一致してexit 0になる', () => {
   const cli = path.join(root, 'bin/unai.mjs');
   assert.equal(execFileSync(process.execPath, [cli, '--version'], { encoding: 'utf8' }), '0.2.1\n');
-  const result = JSON.parse(execFileSync(
-    process.execPath, [cli, 'factory-diagnostics', '--json'], { encoding: 'utf8' },
-  ));
+  const run = spawnSync(process.execPath, [cli, 'factory-diagnostics', '--json'], {
+    encoding: 'utf8',
+  });
+  assert.equal(run.status, 0, run.stderr);
+  assert.equal(run.stderr, '');
+  const result = JSON.parse(run.stdout);
   assert.deepEqual(result, {
     schema: 'unai.native_factory_diagnostics.v1',
     product: { name: 'unai', version: '0.2.1' },
@@ -27,20 +30,33 @@ test('versionとnative diagnosticsがmanifestに一致する', async () => {
   assert.equal(JSON.stringify(result).includes(root), false);
 });
 
-test('skill bundle欠損はnot_readyと非0終了になる', async (t) => {
+test('node_runtimeはpackage enginesの下限をそのまま使う', () => {
+  assert.equal(supportsNodeRuntime('22.12.9', '>=22.13'), false);
+  assert.equal(supportsNodeRuntime('22.13.0', '>=22.13'), true);
+  assert.equal(supportsNodeRuntime('23.0.0', '>=22.13'), true);
+  assert.equal(supportsNodeRuntime('invalid', '>=22.13'), false);
+  assert.equal(supportsNodeRuntime('22.13.0', '^22.13'), false);
+});
+
+test('skill bundle欠損はCLI実起動でnot_ready JSONとexit 1になる', async (t) => {
   const fixture = await mkdtemp(path.join(tmpdir(), 'unai-diagnostics-'));
   t.after(() => rm(fixture, { recursive: true, force: true }));
-  await mkdir(path.join(fixture, '.claude-plugin'), { recursive: true });
-  await mkdir(path.join(fixture, 'skills/unai'), { recursive: true });
-  await Promise.all([
-    writeJsonFixture(path.join(fixture, '.claude-plugin/plugin.json'), { name: 'unai', version: '0.2.1' }),
-    writeJsonFixture(path.join(fixture, '.claude-plugin/marketplace.json'), {
-      name: 'unai', metadata: { version: '0.2.1' }, plugins: [{ name: 'unai', source: './' }],
-    }),
-  ]);
-  const result = await diagnose(fixture);
+  await makeDiagnosticsClone(fixture);
+  const run = spawnSync(process.execPath, [path.join(fixture, 'bin/unai.mjs'),
+    'factory-diagnostics', '--json'], { encoding: 'utf8' });
+  assert.equal(run.status, 1);
+  assert.equal(run.stderr, '');
+  const result = JSON.parse(run.stdout);
   assert.equal(result.checks.skill_bundle, 'fail');
   assert.equal(result.overall, 'not_ready');
+});
+
+test('不正引数はJSONを出さずusageとexit 2を返す', () => {
+  const run = spawnSync(process.execPath, [path.join(root, 'bin/unai.mjs'),
+    'factory-diagnostics', '--yaml'], { encoding: 'utf8' });
+  assert.equal(run.status, 2);
+  assert.equal(run.stdout, '');
+  assert.equal(run.stderr, 'usage: unai --version | unai factory-diagnostics --json\n');
 });
 
 test('bash installerは隔離HOMEへskillとCLIを冪等配置して外せる', async (t) => {
@@ -330,6 +346,24 @@ async function makeInstallerClone(parent, name) {
   return destination;
 }
 
+async function makeDiagnosticsClone(destination) {
+  const files = [
+    '.claude-plugin/plugin.json',
+    '.claude-plugin/marketplace.json',
+    'package.json',
+    'bin/unai.mjs',
+    'lib/diagnostics.mjs',
+    'skills/unai/SKILL.md',
+    'skills/unai/references/core-pass.md',
+    'skills/unai/references/voice-profile.md',
+  ];
+  await Promise.all(files.map(async (file) => {
+    const target = path.join(destination, file);
+    await mkdir(path.dirname(target), { recursive: true });
+    await cp(path.join(root, file), target);
+  }));
+}
+
 function quotePowerShell(value) {
   return `'${value.replaceAll("'", "''")}'`;
 }
@@ -340,8 +374,4 @@ function normalizeWindowsPath(value) {
 
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
-}
-
-async function writeJsonFixture(file, value) {
-  await writeFile(file, `${JSON.stringify(value)}\n`);
 }

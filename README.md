@@ -152,6 +152,45 @@ unai --version
 unai factory-diagnostics --json
 ```
 
+### 工場向けread-only診断の契約
+
+`factory-diagnostics --json`は、unai自身のmanifest・実行環境・skill bundleだけを読む診断入口です。成功・不成功のどちらでも、診断が実行できた場合はstdoutへ1行のJSONを返します。
+
+```json
+{
+  "schema": "unai.native_factory_diagnostics.v1",
+  "product": { "name": "unai", "version": "0.2.1" },
+  "checks": {
+    "manifest_consistency": "pass",
+    "node_runtime": "pass",
+    "skill_bundle": "pass"
+  },
+  "overall": "ready"
+}
+```
+
+top-level fieldは`schema`、`product`、`checks`、`overall`の4つだけです。
+
+| field | 契約 |
+|---|---|
+| `schema` | 常に`unai.native_factory_diagnostics.v1` |
+| `product` | `name`は`unai`、`version`はplugin manifestのSemVer |
+| `checks` | `manifest_consistency`、`node_runtime`、`skill_bundle`の3項目だけ |
+| checkのstatus | 各値は`pass`または`fail`。top-levelの`status` fieldはありません |
+| `overall` | 3項目がすべて`pass`なら`ready`、1つでも`fail`なら`not_ready` |
+
+- `manifest_consistency`: plugin manifestとmarketplace manifestの名前・版数・sourceが一致している
+- `node_runtime`: 実行中のNode.jsが`package.json`の`engines.node`（現在は`>=22.13`）を満たす
+- `skill_bundle`: 配布に必要なskill本体と参照文書を読める
+
+| exit | stdout / stderr | 意味 |
+|---|---|---|
+| `0` | stdoutに診断JSON | `overall: "ready"` |
+| `1` | stdoutに診断JSON | `overall: "not_ready"` |
+| `2` | stderrにusage、診断JSONなし | 引数が不正 |
+
+この診断は校正対象の文章、利用履歴、絶対path、secretを読み取りも出力もしません。
+
 ## 使い方
 
 ```

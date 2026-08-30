@@ -17,7 +17,7 @@
 
 [kitepon.dev](https://kitepon.dev/#systems)所属の[クオ](https://x.com/QLyun35332)が開発・運営しています。
 
-現在のreleaseは **unai 0.2.1** です。
+現在のreleaseは **unai 0.3.0** です。
 
 ## 30秒でできること
 
@@ -159,7 +159,7 @@ unai factory-diagnostics --json
 ```json
 {
   "schema": "unai.native_factory_diagnostics.v1",
-  "product": { "name": "unai", "version": "0.2.1" },
+  "product": { "name": "unai", "version": "0.3.0" },
   "checks": {
     "manifest_consistency": "pass",
     "node_runtime": "pass",

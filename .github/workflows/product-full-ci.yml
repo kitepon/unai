@@ -1,0 +1,53 @@
+name: Product Full CI
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+      - name: Test product and CI contracts
+        run: node --test tests/unai.test.mjs tests/ci-contract.test.mjs
+      - name: Validate POSIX installer syntax
+        if: runner.os != 'Windows'
+        shell: bash
+        run: bash -n install.sh
+      - name: Validate PowerShell 7 installer syntax
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $errors = $null
+          $tokens = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path 'install.ps1'),
+            [ref]$tokens,
+            [ref]$errors
+          ) | Out-Null
+          if ($errors.Count) {
+            $errors | ForEach-Object { Write-Error $_ }
+            exit 1
+          }
+      - name: Exercise public installer surfaces
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          test_home="$(mktemp -d)"
+          trap 'rm -rf "$test_home"' EXIT
+          mkdir -p "$test_home"/{.claude,.codex,.agents,.grok,.cursor}
+          HOME="$test_home" bash install.sh
+          for host in .claude .agents .grok .cursor; do
+            test -L "$test_home/$host/skills/unai"
+            test -f "$test_home/$host/skills/unai/SKILL.md"
+          done
+          test ! -e "$test_home/.codex/skills/unai"

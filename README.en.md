@@ -17,6 +17,8 @@
 
 Built and maintained by [Quo](https://x.com/QLyun35332) at [kitepon.dev](https://kitepon.dev/en/#systems).
 
+The current release is **unai 0.2.1**.
+
 ## In 30 seconds
 
 ```text
@@ -78,7 +80,62 @@ On native Windows, run the PowerShell 7 installer:
 irm https://raw.githubusercontent.com/kitepon/unai/main/install.ps1 | iex
 ```
 
-Re-run the same line to update. Uninstall: `bash ~/.local/share/unai/install.sh --uninstall`
+Re-run the same line to update.
+
+For Codex, the installer uses only the official user-skill surface at `~/.agents/skills/unai`. Use the legacy profile only for an older Codex entry point that still requires `~/.codex/skills/unai`; the installer never deploys both surfaces at once.
+
+Explicit legacy profile on macOS / Linux:
+
+```bash
+bash "${XDG_DATA_HOME:-$HOME/.local/share}/unai/install.sh" --profile legacy
+```
+
+Explicit legacy profile on Windows:
+
+```powershell
+& "$env:LOCALAPPDATA\unai\install.ps1" -Profile legacy
+```
+
+Uninstall on macOS / Linux:
+
+```bash
+bash "${XDG_DATA_HOME:-$HOME/.local/share}/unai/install.sh" --uninstall
+```
+
+Uninstall on Windows after using the one-line installer above:
+
+```powershell
+& "$env:LOCALAPPDATA\unai\install.ps1" -Uninstall
+```
+
+If you installed from a local clone, run `install.sh --uninstall` or `install.ps1 -Uninstall` from that clone. The current installer removes only skill and CLI wiring that still points to that clone, and leaves the repository in place. Between clones that both contain this ownership check, an older clone's uninstaller does not remove wiring that a newer clone has replaced.
+
+An installer from an earlier tag may predate this ownership check. Before using one, inspect the skill and CLI link targets. If they already point to another clone, do not run that old uninstaller; remove only the unused old clone.
+
+### If the installer says it will not overwrite a real file
+
+The installer skips a skill or CLI destination when a regular file or directory already occupies it. Inspect the exact path printed by the installer. If it is yours, rename it to a backup and then run the installer again; do not delete it before checking its contents.
+
+macOS / Linux example:
+
+```bash
+ls -ld ~/.agents/skills/unai ~/.local/bin/unai
+unai_conflict="$HOME/.agents/skills/unai"
+mv "$unai_conflict" "$unai_conflict.before-unai"
+curl -fsSL https://raw.githubusercontent.com/kitepon/unai/main/install.sh | bash
+```
+
+Windows example:
+
+```powershell
+Get-Item -Force "$HOME\.agents\skills\unai", "$HOME\.local\bin\unai.ps1" |
+  Format-List FullName, LinkType, Target, Attributes
+$unaiConflict = "$HOME\.agents\skills\unai"
+Move-Item -LiteralPath $unaiConflict -Destination "$unaiConflict.before-unai"
+irm https://raw.githubusercontent.com/kitepon/unai/main/install.ps1 | iex
+```
+
+For a CLI conflict, back up `~/.local/bin/unai` (or `~/.local/bin/unai.ps1` on Windows) in the same way. Decide whether to merge or remove the backup only after inspecting it.
 
 The installer also places the `unai` CLI in `~/.local/bin`. It exposes the version and a read-only factory diagnostic:
 
@@ -123,6 +180,8 @@ De-AI'd text still needs *your* voice. Put your first-person choice, sentence en
 ## License
 
 MIT
+
+Maintainer contracts: [product and documentation ownership](AGENTS.md), [release and rollback](RELEASE.md).
 
 ## Support and security
 

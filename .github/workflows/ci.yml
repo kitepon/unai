@@ -9,30 +9,12 @@ permissions:
   contents: read
 
 jobs:
-  test:
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
+  ownership:
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 24
-      - run: node --test tests/unai.test.mjs
-      - if: runner.os != 'Windows'
-        run: bash -n install.sh
-      - if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $errors = $null
-          $tokens = $null
-          [System.Management.Automation.Language.Parser]::ParseFile(
-            (Resolve-Path 'install.ps1'),
-            [ref]$tokens,
-            [ref]$errors
-          ) | Out-Null
-          if ($errors.Count) {
-            $errors | ForEach-Object { Write-Error $_ }
-            exit 1
-          }
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Verify product-owned CI
+        run: node --test tests/ci-contract.test.mjs
+
+  full:
+    uses: ./.github/workflows/product-full-ci.yml

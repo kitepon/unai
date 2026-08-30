@@ -17,6 +17,8 @@
 
 [kitepon.dev](https://kitepon.dev/#systems)所属の[クオ](https://x.com/QLyun35332)が開発・運営しています。
 
+現在のreleaseは **unai 0.2.1** です。
+
 ## 30秒でできること
 
 ```text
@@ -82,11 +84,64 @@ Windows nativeではPowerShell 7から実行します。
 irm https://raw.githubusercontent.com/kitepon/unai/main/install.ps1 | iex
 ```
 
-各ホストの部品置き場（`~/.claude/skills/unai` 等）へ繋ぎ込みます。導入していないホストは自動で飛ばします。更新は同じ1行の再実行。外すときは:
+各ホストの部品置き場（`~/.claude/skills/unai` 等）へ繋ぎ込みます。導入していないホストは自動で飛ばします。更新は同じ1行の再実行です。
+
+Codexは公式のuser skill面`~/.agents/skills/unai`だけへ配置します。旧Codexで`~/.codex/skills/unai`が必要な場合だけ、取得済みinstallerを`--profile legacy`（Windowsは`-Profile legacy`）付きで実行してください。公式面と旧面は同時に配置しません。
+
+macOS / Linuxで旧面を明示する例:
 
 ```bash
-bash ~/.local/share/unai/install.sh --uninstall
+bash "${XDG_DATA_HOME:-$HOME/.local/share}/unai/install.sh" --profile legacy
 ```
+
+Windowsで旧面を明示する例:
+
+```powershell
+& "$env:LOCALAPPDATA\unai\install.ps1" -Profile legacy
+```
+
+外すときは、導入したOSの入口を使います。skillとCLIの繋ぎ込みだけを外し、取得したrepoは残します。
+
+macOS / Linux:
+
+```bash
+bash "${XDG_DATA_HOME:-$HOME/.local/share}/unai/install.sh" --uninstall
+```
+
+Windows（上の1行で導入した場合）:
+
+```powershell
+& "$env:LOCALAPPDATA\unai\install.ps1" -Uninstall
+```
+
+手元のcloneから導入した場合は、そのcloneにある`install.sh --uninstall`または`install.ps1 -Uninstall`を実行してください。現在のinstallerは、そのcloneを指しているskillとCLIだけを外します。同じ所有権判定を備えた別versionのcloneから最新版へ張り直した後なら、古いclone側のuninstallで現在の配線は消えません。
+
+この判定を含まない過去tagのinstallerを使う場合は、実行前にskillとCLIのリンク先を確認してください。すでに別cloneを指しているなら、その過去installerでuninstallせず、残った過去cloneだけを削除します。
+
+### 「実ファイルがあるため上書きしない」と出たとき
+
+installerは、skillの配置先やCLIの配置先に通常のファイル／ディレクトリがあると、それを消さずに`skip`します。まず表示された対象が自分の資産かを確認し、必要なら名前を変えて退避してからinstallerをもう一度実行してください。リンクやジャンクションなら`LinkType`／`Target`も確認できます。
+
+macOS / Linuxの例:
+
+```bash
+ls -ld ~/.agents/skills/unai ~/.local/bin/unai
+unai_conflict="$HOME/.agents/skills/unai"
+mv "$unai_conflict" "$unai_conflict.before-unai"
+curl -fsSL https://raw.githubusercontent.com/kitepon/unai/main/install.sh | bash
+```
+
+Windowsの例:
+
+```powershell
+Get-Item -Force "$HOME\.agents\skills\unai", "$HOME\.local\bin\unai.ps1" |
+  Format-List FullName, LinkType, Target, Attributes
+$unaiConflict = "$HOME\.agents\skills\unai"
+Move-Item -LiteralPath $unaiConflict -Destination "$unaiConflict.before-unai"
+irm https://raw.githubusercontent.com/kitepon/unai/main/install.ps1 | iex
+```
+
+競合しているのがCLIなら、同じ手順で`~/.local/bin/unai`（Windowsは`~/.local/bin/unai.ps1`）を退避します。退避物を削除するか統合するかは、中身を確認してから決めてください。
 
 installerは`unai` CLIも`~/.local/bin`へ配置します。版数と工場向けread-only診断は次の入口です。
 
@@ -158,6 +213,8 @@ flowchart LR
 - `skills/unai/references/core-pass.md` — 日本語AI指紋の核（全文書種共通）
 - `skills/unai/references/domains/chat-replies.md` — AIの返答・報告向けの追加規則
 - `skills/unai/references/voice-profile.md` — 声の設定の書き方
+- `AGENTS.md` — 製品の所有境界と文書管理
+- `RELEASE.md` — リリースと版固定による復旧の契約
 
 文書種別の追加規則（ブログ記事・製品記事・SNS投稿）は、実測で検証してから順次足します。
 

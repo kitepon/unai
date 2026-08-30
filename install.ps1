@@ -1,6 +1,8 @@
 [CmdletBinding()]
 param(
-  [switch]$Uninstall
+  [switch]$Uninstall,
+  [ValidateSet('official', 'legacy')]
+  [string]$Profile = 'official'
 )
 
 Set-StrictMode -Version Latest
@@ -12,10 +14,79 @@ if ($PSVersionTable.PSVersion.Major -lt 7) {
 
 $repoUrl = 'https://github.com/kitepon/unai.git'
 $dataDir = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'unai'
-$localSkill = Join-Path $PSScriptRoot 'skills/unai/SKILL.md'
+$wrapperMarker = '# unai installer managed wrapper'
+$localSkill = if ($PSScriptRoot) {
+  Join-Path $PSScriptRoot 'skills/unai/SKILL.md'
+} else {
+  $null
+}
 
-if ($PSScriptRoot -and (Test-Path -LiteralPath $localSkill -PathType Leaf)) {
-  $sourceDir = $PSScriptRoot
+function Get-NormalizedPath {
+  param([Parameter(Mandatory)][string]$Path)
+  return [System.IO.Path]::GetFullPath($Path)
+}
+
+function Test-OwnedLink {
+  param(
+    [Parameter(Mandatory)][string]$Path,
+    [Parameter(Mandatory)][string]$ExpectedTarget
+  )
+  if (-not (Test-Path -LiteralPath $Path)) { return $false }
+  $item = Get-Item -LiteralPath $Path -Force
+  if ($item.LinkType -notin @('Junction', 'SymbolicLink')) { return $false }
+  $target = @($item.Target)[0]
+  if (-not $target) { return $false }
+  if (-not [System.IO.Path]::IsPathRooted($target)) {
+    $target = Join-Path (Split-Path -Parent $Path) $target
+  }
+  return (Get-NormalizedPath $target) -eq (Get-NormalizedPath $ExpectedTarget)
+}
+
+$commonTargets = @(
+  (Join-Path $HOME '.claude/skills/unai'),
+  (Join-Path $HOME '.grok/skills/unai'),
+  (Join-Path $HOME '.cursor/skills/unai')
+)
+$officialCodexTarget = Join-Path $HOME '.agents/skills/unai'
+$legacyCodexTarget = Join-Path $HOME '.codex/skills/unai'
+$binDir = Join-Path $HOME '.local/bin'
+$cliTarget = Join-Path $binDir 'unai.ps1'
+
+# uninstallはclone/pullより先に処理し、このinstallerのcloneを指す配線だけを外す。
+if ($Uninstall) {
+  $uninstallSourceDir = if ($localSkill -and (Test-Path -LiteralPath $localSkill -PathType Leaf)) {
+    $PSScriptRoot
+  } else {
+    $dataDir
+  }
+  $skillSource = Join-Path $uninstallSourceDir 'skills/unai'
+  foreach ($target in @($commonTargets + $officialCodexTarget + $legacyCodexTarget)) {
+    if (Test-OwnedLink -Path $target -ExpectedTarget $skillSource) {
+      Remove-Item -LiteralPath $target -Force
+      Write-Output "外した: $target"
+    }
+  }
+  if (Test-Path -LiteralPath $cliTarget -PathType Leaf) {
+    $head = @(Get-Content -LiteralPath $cliTarget -TotalCount 2)
+    $expectedOwner = "# unai installer source: $(Get-NormalizedPath $uninstallSourceDir)"
+    if ($head.Count -ge 2 -and $head[0] -eq $wrapperMarker -and $head[1] -eq $expectedOwner) {
+      Remove-Item -LiteralPath $cliTarget -Force
+      Write-Output "外した: $cliTarget"
+    }
+  }
+  Write-Output "完了。このinstallerが繋いだ面だけを外した。実体 ($uninstallSourceDir) は残っている。"
+  exit 0
+}
+
+$sourceOverride = $env:UNAI_INSTALL_SOURCE_DIR
+if ($sourceOverride) {
+  $overrideSkill = Join-Path $sourceOverride 'skills/unai/SKILL.md'
+  if (-not (Test-Path -LiteralPath $overrideSkill -PathType Leaf)) {
+    throw "UNAI_INSTALL_SOURCE_DIR does not contain skills/unai/SKILL.md: $sourceOverride"
+  }
+  $sourceDir = Get-NormalizedPath $sourceOverride
+} elseif ($localSkill -and (Test-Path -LiteralPath $localSkill -PathType Leaf)) {
+  $sourceDir = Get-NormalizedPath $PSScriptRoot
 } elseif (Test-Path -LiteralPath (Join-Path $dataDir '.git') -PathType Container) {
   & git -C $dataDir pull --ff-only
   if ($LASTEXITCODE -ne 0) { throw 'git pull failed' }
@@ -27,56 +98,62 @@ if ($PSScriptRoot -and (Test-Path -LiteralPath $localSkill -PathType Leaf)) {
 }
 
 $skillSource = Join-Path $sourceDir 'skills/unai'
-$targets = @(
-  (Join-Path $HOME '.claude/skills/unai'),
-  (Join-Path $HOME '.codex/skills/unai'),
-  (Join-Path $HOME '.agents/skills/unai'),
-  (Join-Path $HOME '.grok/skills/unai'),
-  (Join-Path $HOME '.cursor/skills/unai')
-)
-$binDir = Join-Path $HOME '.local/bin'
-$cliTarget = Join-Path $binDir 'unai.ps1'
-$wrapperMarker = '# unai installer managed wrapper'
+$codexTarget = if ($Profile -eq 'official') { $officialCodexTarget } else { $legacyCodexTarget }
+$codexOpposite = if ($Profile -eq 'official') { $legacyCodexTarget } else { $officialCodexTarget }
 
-if ($Uninstall) {
-  foreach ($target in $targets) {
-    if (Test-Path -LiteralPath $target) {
-      $item = Get-Item -LiteralPath $target -Force
-      if ($item.LinkType -in @('Junction', 'SymbolicLink')) {
-        Remove-Item -LiteralPath $target -Force
-        Write-Output "外した: $target"
-      }
-    }
+function Install-SkillTarget {
+  param([Parameter(Mandatory)][string]$Target)
+  $hostRoot = Split-Path -Parent (Split-Path -Parent $Target)
+  if (-not (Test-Path -LiteralPath $hostRoot -PathType Container)) {
+    Write-Output "skip: $Target （ホスト未導入）"
+    return
   }
-  if (Test-Path -LiteralPath $cliTarget -PathType Leaf) {
-    $firstLine = Get-Content -LiteralPath $cliTarget -TotalCount 1
-    if ($firstLine -eq $wrapperMarker) {
-      Remove-Item -LiteralPath $cliTarget -Force
-      Write-Output "外した: $cliTarget"
+  $parent = Split-Path -Parent $Target
+  New-Item -ItemType Directory -Path $parent -Force | Out-Null
+  if (Test-Path -LiteralPath $Target) {
+    $item = Get-Item -LiteralPath $Target -Force
+    if ($item.LinkType -notin @('Junction', 'SymbolicLink')) {
+      Write-Output "skip: $Target （実ファイルがあるため上書きしない）"
+      return
     }
+    Remove-Item -LiteralPath $Target -Force
   }
-  Write-Output "完了。実体 ($sourceDir) は残っている。不要なら削除してよい。"
-  exit 0
+  New-Item -ItemType Junction -Path $Target -Target $skillSource | Out-Null
+  Write-Output "繋いだ: $Target"
 }
 
-foreach ($target in $targets) {
-  $hostRoot = Split-Path -Parent (Split-Path -Parent $target)
-  if (-not (Test-Path -LiteralPath $hostRoot -PathType Container)) {
-    Write-Output "skip: $target （ホスト未導入）"
-    continue
-  }
-  $parent = Split-Path -Parent $target
-  New-Item -ItemType Directory -Path $parent -Force | Out-Null
-  if (Test-Path -LiteralPath $target) {
-    $item = Get-Item -LiteralPath $target -Force
-    if ($item.LinkType -notin @('Junction', 'SymbolicLink')) {
-      Write-Output "skip: $target （実ファイルがあるため上書きしない）"
-      continue
+foreach ($target in $commonTargets) {
+  Install-SkillTarget -Target $target
+}
+
+# Codexの公式面と旧面は同居させない。同じcloneの反対面だけは移行時に外す。
+$codexHostPresent = (
+  (Test-Path -LiteralPath (Join-Path $HOME '.codex') -PathType Container) -or
+  (Test-Path -LiteralPath (Join-Path $HOME '.agents') -PathType Container)
+)
+if (-not $codexHostPresent) {
+  Write-Output "skip: $codexTarget （Codex未導入）"
+} elseif (Test-Path -LiteralPath $codexOpposite) {
+  if (Test-OwnedLink -Path $codexOpposite -ExpectedTarget $skillSource) {
+    $targetBlocked = $false
+    if (Test-Path -LiteralPath $codexTarget) {
+      $targetItem = Get-Item -LiteralPath $codexTarget -Force
+      $targetBlocked = $targetItem.LinkType -notin @('Junction', 'SymbolicLink')
     }
-    Remove-Item -LiteralPath $target -Force
+    if ($targetBlocked) {
+      Write-Output "skip: $codexTarget （実ファイルがあるため反対profileを保持）"
+    } else {
+      Remove-Item -LiteralPath $codexOpposite -Force
+      Write-Output "外した: $codexOpposite （反対profileの重複）"
+      New-Item -ItemType Directory -Path (Split-Path -Parent $codexTarget) -Force | Out-Null
+      Install-SkillTarget -Target $codexTarget
+    }
+  } else {
+    Write-Output "skip: $codexTarget （反対profileに別のunaiがある: $codexOpposite）"
   }
-  New-Item -ItemType Junction -Path $target -Target $skillSource | Out-Null
-  Write-Output "繋いだ: $target"
+} else {
+  New-Item -ItemType Directory -Path (Split-Path -Parent $codexTarget) -Force | Out-Null
+  Install-SkillTarget -Target $codexTarget
 }
 
 New-Item -ItemType Directory -Path $binDir -Force | Out-Null
@@ -84,9 +161,26 @@ $cliPath = Join-Path $sourceDir 'bin/unai.mjs'
 $escapedCliPath = $cliPath.Replace("'", "''")
 $wrapper = @(
   $wrapperMarker,
+  "# unai installer source: $(Get-NormalizedPath $sourceDir)",
   "& node '$escapedCliPath' @args",
   'exit $LASTEXITCODE'
 ) -join "`n"
-Set-Content -LiteralPath $cliTarget -Value $wrapper -Encoding utf8NoBOM
-Write-Output "繋いだ: $cliTarget"
+$canWriteCli = $true
+if (Test-Path -LiteralPath $cliTarget) {
+  $cliItem = Get-Item -LiteralPath $cliTarget -Force
+  if ($cliItem.LinkType -in @('Junction', 'SymbolicLink')) {
+    Remove-Item -LiteralPath $cliTarget -Force
+  } elseif ($cliItem.PSIsContainer) {
+    $canWriteCli = $false
+  } else {
+    $firstLine = Get-Content -LiteralPath $cliTarget -TotalCount 1
+    $canWriteCli = $firstLine -eq $wrapperMarker
+  }
+}
+if ($canWriteCli) {
+  Set-Content -LiteralPath $cliTarget -Value $wrapper -Encoding utf8NoBOM
+  Write-Output "繋いだ: $cliTarget"
+} else {
+  Write-Output "skip: $cliTarget （実ファイルがあるため上書きしない）"
+}
 Write-Output '完了。更新は同じinstallerの再実行でよい。'

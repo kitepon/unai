@@ -54,6 +54,8 @@ symptoms and fixes only the offending spots.
 - Insurance prefaces ("to be honest", "actually") before the point
 - Identical paragraph structure in every piece, one emoji per paragraph, uniform hedged endings
 - Formulaic closers ("worth keeping an eye on!")
+- Minimizing phrases and fake humility ("just", "merely") that shrink deliberate work
+- Fabricated first-person experiences the writer never actually reported
 
 Over-correction is also a fingerprint: prose that obeys every rule uniformly is a new kind of absence. unai edits minimally.
 
@@ -175,7 +177,7 @@ Locations can vary by host version; if these don't match, check your host's docs
 
 ## Voice profile
 
-De-AI'd text still needs *your* voice. Put your first-person choice, sentence endings, banned words, and allowed looseness in `~/.unai/voice.md` (or per-project `.unai/voice.md`); unai gives it priority over the core rules. See [skills/unai/references/voice-profile.md](skills/unai/references/voice-profile.md).
+De-AI'd text still needs *your* voice. Put your first-person choice, sentence endings, banned words, and allowed looseness in `~/.unai/voice.md` (or per-project `.unai/voice.md`); unai gives it priority over the core rules. Point the profile at real samples of your writing rather than bare rules about endings — a rule alone ("never use polite forms") pushes the AI into a different imitation. See [skills/unai/references/voice-profile.md](skills/unai/references/voice-profile.md).
 
 ## License
 

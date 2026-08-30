@@ -23,7 +23,11 @@ $localSkill = if ($PSScriptRoot) {
 
 function Get-NormalizedPath {
   param([Parameter(Mandatory)][string]$Path)
-  return [System.IO.Path]::GetFullPath($Path)
+  $fullPath = [System.IO.Path]::GetFullPath($Path)
+  if (Test-Path -LiteralPath $fullPath) {
+    return (Resolve-Path -LiteralPath $fullPath).ProviderPath
+  }
+  return $fullPath
 }
 
 function Test-OwnedLink {

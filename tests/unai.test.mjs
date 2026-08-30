@@ -264,6 +264,9 @@ test('古いPowerShell installerのuninstallは別versionが張り直した配�
   await Promise.all(['.agents', '.codex'].map((dir) => mkdir(path.join(home, dir), { recursive: true })));
   const versionA = await makeInstallerClone(fixture, 'version-a');
   const versionB = await makeInstallerClone(fixture, 'version-b');
+  const versionASkill = normalizeWindowsPath(await realpath(path.join(versionA, 'skills/unai')));
+  const versionBSkill = normalizeWindowsPath(await realpath(path.join(versionB, 'skills/unai')));
+  const versionBSource = normalizeWindowsPath(await realpath(versionB));
   const env = { ...process.env, HOME: home, USERPROFILE: home };
 
   execFileSync('pwsh', [
@@ -273,8 +276,10 @@ test('古いPowerShell installerのuninstallは別versionが張り直した配�
     env,
     stdio: 'pipe',
   });
-  assert.equal(normalizeWindowsPath(await realpath(path.join(home, '.codex/skills/unai'))),
-    normalizeWindowsPath(path.join(versionA, 'skills/unai')));
+  assert.equal(
+    normalizeWindowsPath(await realpath(path.join(home, '.codex/skills/unai'))),
+    versionASkill,
+  );
   await assert.rejects(lstat(path.join(home, '.agents/skills/unai')), { code: 'ENOENT' });
   execFileSync('pwsh', ['-NoProfile', '-File', path.join(versionA, 'install.ps1'), '-Uninstall'], {
     env,
@@ -289,19 +294,15 @@ test('古いPowerShell installerのuninstallは別versionが張り直した配�
   }
   const skill = path.join(home, '.agents/skills/unai');
   const cli = path.join(home, '.local/bin/unai.ps1');
-  assert.equal(normalizeWindowsPath(await realpath(skill)), normalizeWindowsPath(
-    path.join(versionB, 'skills/unai'),
-  ));
-  assert.match(await readFile(cli, 'utf8'), new RegExp(escapeRegExp(normalizeWindowsPath(versionB)), 'iu'));
+  assert.equal(normalizeWindowsPath(await realpath(skill)), versionBSkill);
+  assert.match(await readFile(cli, 'utf8'), new RegExp(escapeRegExp(versionBSource), 'iu'));
 
   execFileSync('pwsh', ['-NoProfile', '-File', path.join(versionA, 'install.ps1'), '-Uninstall'], {
     env,
     stdio: 'pipe',
   });
-  assert.equal(normalizeWindowsPath(await realpath(skill)), normalizeWindowsPath(
-    path.join(versionB, 'skills/unai'),
-  ));
-  assert.match(await readFile(cli, 'utf8'), new RegExp(escapeRegExp(normalizeWindowsPath(versionB)), 'iu'));
+  assert.equal(normalizeWindowsPath(await realpath(skill)), versionBSkill);
+  assert.match(await readFile(cli, 'utf8'), new RegExp(escapeRegExp(versionBSource), 'iu'));
 
   execFileSync('pwsh', ['-NoProfile', '-File', path.join(versionB, 'install.ps1'), '-Uninstall'], {
     env,

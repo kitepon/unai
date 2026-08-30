@@ -19,7 +19,7 @@ test('versionと4ホストready diagnosticsがmanifestに一致してexit 0に�
   const cli = path.join(root, 'bin/unai.mjs');
   assert.equal(execFileSync(process.execPath, [cli, '--version'], { encoding: 'utf8' }), '0.4.0\n');
   const run = spawnSync(process.execPath, [cli, 'factory-diagnostics', '--json'], {
-    encoding: 'utf8', env: { ...process.env, HOME: home },
+    encoding: 'utf8', env: homeEnvironment(home),
   });
   assert.equal(run.status, 0, run.stderr);
   assert.equal(run.stderr, '');
@@ -57,7 +57,7 @@ test('skill bundle欠損はCLI実起動でnot_ready JSONとexit 1になる', asy
   await projectAllHarnesses(home, path.join(fixture, 'skills/unai'));
   const run = spawnSync(process.execPath, [path.join(fixture, 'bin/unai.mjs'),
     'factory-diagnostics', '--json'], {
-    encoding: 'utf8', env: { ...process.env, HOME: home },
+    encoding: 'utf8', env: homeEnvironment(home),
   });
   assert.equal(run.status, 1);
   assert.equal(run.stderr, '');
@@ -94,7 +94,7 @@ test('projection diagnosticsは4ホストのmissing・stale・conflictを型付�
 
   const run = spawnSync(process.execPath, [path.join(root, 'bin/unai.mjs'),
     'factory-diagnostics', '--json'], {
-    encoding: 'utf8', env: { ...process.env, HOME: home },
+    encoding: 'utf8', env: homeEnvironment(home),
   });
   assert.equal(run.status, 1, run.stderr);
   assert.equal(run.stderr, '');
@@ -116,7 +116,7 @@ test('projection diagnosticsはbundleと完全一致する実体copyもreadyと�
 
   const run = spawnSync(process.execPath, [path.join(root, 'bin/unai.mjs'),
     'factory-diagnostics', '--json'], {
-    encoding: 'utf8', env: { ...process.env, HOME: home },
+    encoding: 'utf8', env: homeEnvironment(home),
   });
   assert.equal(run.status, 0, run.stderr);
   assert.deepEqual(JSON.parse(run.stdout).checks.skill_projections, {
@@ -135,14 +135,14 @@ test('Codexの公式面とlegacy面が同居すれば同じbundle内容でもcon
 
   const run = spawnSync(process.execPath, [path.join(root, 'bin/unai.mjs'),
     'factory-diagnostics', '--json'], {
-    encoding: 'utf8', env: { ...process.env, HOME: home },
+    encoding: 'utf8', env: homeEnvironment(home),
   });
   assert.equal(run.status, 1, run.stderr);
   assert.equal(JSON.parse(run.stdout).checks.skill_projections.codex, 'conflict');
 
   if (process.platform !== 'win32') {
     const install = spawnSync('bash', [path.join(root, 'install.sh')], {
-      encoding: 'utf8', env: { ...process.env, HOME: home },
+      encoding: 'utf8', env: homeEnvironment(home),
     });
     assert.equal(install.status, 1);
     assert.doesNotMatch(install.stdout, /完了。4ホスト/u);
@@ -531,6 +531,10 @@ async function projectAllHarnesses(home, source, profile = 'official') {
     await mkdir(path.dirname(target), { recursive: true });
     await symlink(source, target, process.platform === 'win32' ? 'junction' : 'dir');
   }
+}
+
+function homeEnvironment(home) {
+  return { ...process.env, HOME: home, USERPROFILE: home };
 }
 
 function quotePowerShell(value) {

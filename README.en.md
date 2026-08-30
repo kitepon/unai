@@ -17,7 +17,7 @@
 
 Built and maintained by [Quo](https://x.com/QLyun35332) at [kitepon.dev](https://kitepon.dev/en/#systems).
 
-The current release is **unai 0.3.0**.
+The current release is **unai 0.4.0**.
 
 ## In 30 seconds
 
@@ -82,7 +82,7 @@ On native Windows, run the PowerShell 7 installer:
 irm https://raw.githubusercontent.com/kitepon/unai/main/install.ps1 | iex
 ```
 
-Re-run the same line to update.
+The installer projects the skill into all four supported harness surfaces: Claude Code, Codex, Grok, and Cursor. Re-run the same line to update.
 
 For Codex, the installer uses only the official user-skill surface at `~/.agents/skills/unai`. Use the legacy profile only for an older Codex entry point that still requires `~/.codex/skills/unai`; the installer never deploys both surfaces at once.
 
@@ -116,7 +116,7 @@ An installer from an earlier tag may predate this ownership check. Before using 
 
 ### If the installer says it will not overwrite a real file
 
-The installer skips a skill or CLI destination when a regular file or directory already occupies it. Inspect the exact path printed by the installer. If it is yours, rename it to a backup and then run the installer again; do not delete it before checking its contents.
+When a regular file or directory already occupies a skill or CLI destination, the installer preserves it. If the skill does not match the distributed bundle, or a user-owned CLI remains, the installer prints diagnostic JSON and exits nonzero instead of reporting success. Inspect the exact path it prints. If the item is yours, rename it to a backup and then run the installer again; do not delete it before checking its contents.
 
 macOS / Linux example:
 
@@ -148,16 +148,22 @@ unai factory-diagnostics --json
 
 ### Read-only factory diagnostics contract
 
-`factory-diagnostics --json` inspects only unai's own manifests, runtime, and skill bundle. When the diagnostic runs, it writes one line of JSON to stdout for both ready and not-ready results.
+`factory-diagnostics --json` inspects unai's manifests, runtime, skill bundle, and projections into all four harnesses. When the diagnostic runs, it writes one line of JSON to stdout for both ready and not-ready results. Add `--profile legacy` when using the legacy Codex surface.
 
 ```json
 {
-  "schema": "unai.native_factory_diagnostics.v1",
-  "product": { "name": "unai", "version": "0.3.0" },
+  "schema": "unai.native_factory_diagnostics.v2",
+  "product": { "name": "unai", "version": "0.4.0" },
   "checks": {
     "manifest_consistency": "pass",
     "node_runtime": "pass",
-    "skill_bundle": "pass"
+    "skill_bundle": "pass",
+    "skill_projections": {
+      "claude": "ready",
+      "codex": "ready",
+      "grok": "ready",
+      "cursor": "ready"
+    }
   },
   "overall": "ready"
 }
@@ -167,15 +173,19 @@ The only top-level fields are `schema`, `product`, `checks`, and `overall`.
 
 | Field | Contract |
 |---|---|
-| `schema` | Always `unai.native_factory_diagnostics.v1` |
+| `schema` | Always `unai.native_factory_diagnostics.v2` |
 | `product` | `name` is `unai`; `version` is the SemVer from the plugin manifest |
-| `checks` | Exactly `manifest_consistency`, `node_runtime`, and `skill_bundle` |
-| Check status | Each value is `pass` or `fail`; there is no top-level `status` field |
-| `overall` | `ready` when all three checks pass; otherwise `not_ready` |
+| `checks` | Three product checks plus `skill_projections` |
+| Product-check status | `pass` or `fail`; there is no top-level `status` field |
+| Projection status | Each host is `ready`, `missing`, `stale`, or `conflict` |
+| `overall` | `ready` only when all three product checks pass and all four projections are ready |
 
 - `manifest_consistency`: the names, versions, and source in the plugin and marketplace manifests agree
 - `node_runtime`: the running Node.js satisfies `package.json`'s `engines.node` (currently `>=22.13`)
 - `skill_bundle`: the distributed skill and its required references are readable
+- `skill_projections`: the Claude Code, Codex, Grok, and Cursor destinations use the current bundle
+
+A direct symlink or junction to this product bundle is `ready`; so is a directory copy whose contents match the bundle exactly. A missing destination is `missing`, an outdated real directory or dangling link is `stale`, and a regular file, link to another bundle, or coexistence of the official and legacy Codex surfaces is `conflict`. Absolute paths are not emitted.
 
 | Exit | stdout / stderr | Meaning |
 |---|---|---|

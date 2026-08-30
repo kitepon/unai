@@ -17,7 +17,7 @@
 
 [kitepon.dev](https://kitepon.dev/#systems)所属の[クオ](https://x.com/QLyun35332)が開発・運営しています。
 
-現在のreleaseは **unai 0.3.0** です。
+現在のreleaseは **unai 0.4.0** です。
 
 ## 30秒でできること
 
@@ -86,7 +86,7 @@ Windows nativeではPowerShell 7から実行します。
 irm https://raw.githubusercontent.com/kitepon/unai/main/install.ps1 | iex
 ```
 
-各ホストの部品置き場（`~/.claude/skills/unai` 等）へ繋ぎ込みます。導入していないホストは自動で飛ばします。更新は同じ1行の再実行です。
+Claude Code、Codex、Grok、Cursorの4つの部品置き場（`~/.claude/skills/unai` 等）へ繋ぎ込みます。更新は同じ1行の再実行です。
 
 Codexは公式のuser skill面`~/.agents/skills/unai`だけへ配置します。旧Codexで`~/.codex/skills/unai`が必要な場合だけ、取得済みinstallerを`--profile legacy`（Windowsは`-Profile legacy`）付きで実行してください。公式面と旧面は同時に配置しません。
 
@@ -122,7 +122,7 @@ Windows（上の1行で導入した場合）:
 
 ### 「実ファイルがあるため上書きしない」と出たとき
 
-installerは、skillの配置先やCLIの配置先に通常のファイル／ディレクトリがあると、それを消さずに`skip`します。まず表示された対象が自分の資産かを確認し、必要なら名前を変えて退避してからinstallerをもう一度実行してください。リンクやジャンクションなら`LinkType`／`Target`も確認できます。
+installerは、skillの配置先やCLIの配置先に通常のファイル／ディレクトリがあると、それを消さずに保持します。配布bundleと一致しないskillや利用者のCLIが残れば、診断JSONを出して非0終了し、成功とは表示しません。まず表示された対象が自分の資産かを確認し、必要なら名前を変えて退避してからinstallerをもう一度実行してください。リンクやジャンクションなら`LinkType`／`Target`も確認できます。
 
 macOS / Linuxの例:
 
@@ -154,16 +154,22 @@ unai factory-diagnostics --json
 
 ### 工場向けread-only診断の契約
 
-`factory-diagnostics --json`は、unai自身のmanifest・実行環境・skill bundleだけを読む診断入口です。成功・不成功のどちらでも、診断が実行できた場合はstdoutへ1行のJSONを返します。
+`factory-diagnostics --json`は、unai自身のmanifest・実行環境・skill bundleと4ホストへの投影を読む診断入口です。成功・不成功のどちらでも、診断が実行できた場合はstdoutへ1行のJSONを返します。legacy Codex面を使う場合は`--profile legacy`を加えます。
 
 ```json
 {
-  "schema": "unai.native_factory_diagnostics.v1",
-  "product": { "name": "unai", "version": "0.3.0" },
+  "schema": "unai.native_factory_diagnostics.v2",
+  "product": { "name": "unai", "version": "0.4.0" },
   "checks": {
     "manifest_consistency": "pass",
     "node_runtime": "pass",
-    "skill_bundle": "pass"
+    "skill_bundle": "pass",
+    "skill_projections": {
+      "claude": "ready",
+      "codex": "ready",
+      "grok": "ready",
+      "cursor": "ready"
+    }
   },
   "overall": "ready"
 }
@@ -173,15 +179,19 @@ top-level fieldは`schema`、`product`、`checks`、`overall`の4つだけです
 
 | field | 契約 |
 |---|---|
-| `schema` | 常に`unai.native_factory_diagnostics.v1` |
+| `schema` | 常に`unai.native_factory_diagnostics.v2` |
 | `product` | `name`は`unai`、`version`はplugin manifestのSemVer |
-| `checks` | `manifest_consistency`、`node_runtime`、`skill_bundle`の3項目だけ |
-| checkのstatus | 各値は`pass`または`fail`。top-levelの`status` fieldはありません |
-| `overall` | 3項目がすべて`pass`なら`ready`、1つでも`fail`なら`not_ready` |
+| `checks` | 3つの製品checkと`skill_projections` |
+| 製品checkのstatus | `pass`または`fail`。top-levelの`status` fieldはありません |
+| projectionのstatus | 各hostは`ready`、`missing`、`stale`、`conflict`のいずれか |
+| `overall` | 3つの製品checkが`pass`かつ4面が`ready`なら`ready`、それ以外は`not_ready` |
 
 - `manifest_consistency`: plugin manifestとmarketplace manifestの名前・版数・sourceが一致している
 - `node_runtime`: 実行中のNode.jsが`package.json`の`engines.node`（現在は`>=22.13`）を満たす
 - `skill_bundle`: 配布に必要なskill本体と参照文書を読める
+- `skill_projections`: Claude Code、Codex、Grok、Cursorの配置先が現在のbundleを使っている
+
+projectionは、この製品bundleを直接指すsymlink／junction、または内容が完全一致するdirectory copyだけが`ready`です。配置先がなければ`missing`、実体directoryの内容が古いかdangling linkなら`stale`、通常file、別bundleへのlink、Codexの公式面とlegacy面の同居は`conflict`です。絶対pathはJSONへ出しません。
 
 | exit | stdout / stderr | 意味 |
 |---|---|---|

@@ -18,7 +18,8 @@
 ## 変更と検証
 
 - 文章規範の変更は、書き手の主張と声を残す最小修正という製品目的を守る。
-- installerは利用者の通常ファイル／ディレクトリを上書きしない。配置先が競合した場合は`skip`し、利用者が退避して再実行できる状態を保つ。
+- installerは利用者の通常ファイル／ディレクトリを上書きしない。配置先が競合した場合は資産を保持し、型付き診断を出して非0終了する。利用者が退避して再実行できる状態を保つ。
+- Claude Code、Codex、Grok、Cursorのskill projectionはunaiが公開診断を所有する。正しいリンクまたは配布bundleと完全一致するcopyだけを`ready`とする。
 - Codex skillの既定配布面は`~/.agents/skills/unai`だけとし、`~/.codex/skills/unai`は明示したlegacy profileだけに置く。両面を同居させない。
 - uninstallは取得・更新を行わず、そのinstallerのcloneを指すskillとCLIだけを外す。別versionが張り直した配線は変更しない。
 - 挙動、installer、manifest、CIを変えた場合は対応するfocused testを追加し、`node --test tests/unai.test.mjs tests/ci-contract.test.mjs`を通す。

@@ -5,7 +5,7 @@
   },
   "metadata": {
     "description": "日本語文章からAIっぽさを取り除く校正規範 (un-AI Japanese writing)",
-    "version": "0.3.0"
+    "version": "0.4.0"
   },
   "plugins": [
     {

@@ -10,12 +10,20 @@ const args = process.argv.slice(2);
 try {
   if (args.length === 1 && args[0] === '--version') {
     process.stdout.write(`${await productVersion(root)}\n`);
-  } else if (args.length === 2 && args[0] === 'factory-diagnostics' && args[1] === '--json') {
-    const result = await diagnose(root);
-    process.stdout.write(`${JSON.stringify(result)}\n`);
-    if (result.overall !== 'ready') process.exitCode = 1;
+  } else if ((args.length === 2 || args.length === 4)
+    && args[0] === 'factory-diagnostics' && args[1] === '--json'
+    && (args.length === 2 || args[2] === '--profile')) {
+    const profile = args.length === 4 ? args[3] : 'official';
+    if (profile !== 'official' && profile !== 'legacy') {
+      process.stderr.write('usage: unai --version | unai factory-diagnostics --json [--profile official|legacy]\n');
+      process.exitCode = 2;
+    } else {
+      const result = await diagnose(root, { profile });
+      process.stdout.write(`${JSON.stringify(result)}\n`);
+      if (result.overall !== 'ready') process.exitCode = 1;
+    }
   } else {
-    process.stderr.write('usage: unai --version | unai factory-diagnostics --json\n');
+    process.stderr.write('usage: unai --version | unai factory-diagnostics --json [--profile official|legacy]\n');
     process.exitCode = 2;
   }
 } catch (error) {

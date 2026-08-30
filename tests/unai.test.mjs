@@ -12,22 +12,33 @@ import { supportsNodeRuntime } from '../lib/diagnostics.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-test('versionとready diagnosticsがmanifestに一致してexit 0になる', () => {
+test('versionと4ホストready diagnosticsがmanifestに一致してexit 0になる', async (t) => {
+  const home = await mkdtemp(path.join(tmpdir(), 'unai-diagnostics-ready-'));
+  t.after(() => rm(home, { recursive: true, force: true }));
+  await projectAllHarnesses(home, path.join(root, 'skills/unai'));
   const cli = path.join(root, 'bin/unai.mjs');
-  assert.equal(execFileSync(process.execPath, [cli, '--version'], { encoding: 'utf8' }), '0.3.0\n');
+  assert.equal(execFileSync(process.execPath, [cli, '--version'], { encoding: 'utf8' }), '0.4.0\n');
   const run = spawnSync(process.execPath, [cli, 'factory-diagnostics', '--json'], {
-    encoding: 'utf8',
+    encoding: 'utf8', env: { ...process.env, HOME: home },
   });
   assert.equal(run.status, 0, run.stderr);
   assert.equal(run.stderr, '');
   const result = JSON.parse(run.stdout);
   assert.deepEqual(result, {
-    schema: 'unai.native_factory_diagnostics.v1',
-    product: { name: 'unai', version: '0.3.0' },
-    checks: { manifest_consistency: 'pass', node_runtime: 'pass', skill_bundle: 'pass' },
+    schema: 'unai.native_factory_diagnostics.v2',
+    product: { name: 'unai', version: '0.4.0' },
+    checks: {
+      manifest_consistency: 'pass',
+      node_runtime: 'pass',
+      skill_bundle: 'pass',
+      skill_projections: {
+        claude: 'ready', codex: 'ready', grok: 'ready', cursor: 'ready',
+      },
+    },
     overall: 'ready',
   });
   assert.equal(JSON.stringify(result).includes(root), false);
+  assert.equal(JSON.stringify(result).includes(home), false);
 });
 
 test('node_runtimeはpackage enginesの下限をそのまま使う', () => {
@@ -42,8 +53,12 @@ test('skill bundle欠損はCLI実起動でnot_ready JSONとexit 1になる', asy
   const fixture = await mkdtemp(path.join(tmpdir(), 'unai-diagnostics-'));
   t.after(() => rm(fixture, { recursive: true, force: true }));
   await makeDiagnosticsClone(fixture);
+  const home = path.join(fixture, 'home');
+  await projectAllHarnesses(home, path.join(fixture, 'skills/unai'));
   const run = spawnSync(process.execPath, [path.join(fixture, 'bin/unai.mjs'),
-    'factory-diagnostics', '--json'], { encoding: 'utf8' });
+    'factory-diagnostics', '--json'], {
+    encoding: 'utf8', env: { ...process.env, HOME: home },
+  });
   assert.equal(run.status, 1);
   assert.equal(run.stderr, '');
   const result = JSON.parse(run.stdout);
@@ -56,7 +71,83 @@ test('不正引数はJSONを出さずusageとexit 2を返す', () => {
     'factory-diagnostics', '--yaml'], { encoding: 'utf8' });
   assert.equal(run.status, 2);
   assert.equal(run.stdout, '');
-  assert.equal(run.stderr, 'usage: unai --version | unai factory-diagnostics --json\n');
+  assert.equal(
+    run.stderr,
+    'usage: unai --version | unai factory-diagnostics --json [--profile official|legacy]\n',
+  );
+});
+
+test('projection diagnosticsは4ホストのmissing・stale・conflictを型付きで返す', async (t) => {
+  const home = await mkdtemp(path.join(tmpdir(), 'unai-diagnostics-not-ready-'));
+  t.after(() => rm(home, { recursive: true, force: true }));
+  const source = path.join(root, 'skills/unai');
+  const targets = harnessSkillTargets(home);
+
+  await mkdir(targets.codex, { recursive: true });
+  await writeFile(path.join(targets.codex, 'stale.txt'), 'old bundle\n');
+  await mkdir(path.dirname(targets.grok), { recursive: true });
+  await writeFile(targets.grok, 'not a skill directory\n');
+  const otherBundle = path.join(home, 'other-unai');
+  await cp(source, otherBundle, { recursive: true });
+  await mkdir(path.dirname(targets.cursor), { recursive: true });
+  await symlink(otherBundle, targets.cursor, process.platform === 'win32' ? 'junction' : 'dir');
+
+  const run = spawnSync(process.execPath, [path.join(root, 'bin/unai.mjs'),
+    'factory-diagnostics', '--json'], {
+    encoding: 'utf8', env: { ...process.env, HOME: home },
+  });
+  assert.equal(run.status, 1, run.stderr);
+  assert.equal(run.stderr, '');
+  const result = JSON.parse(run.stdout);
+  assert.deepEqual(result.checks.skill_projections, {
+    claude: 'missing', codex: 'stale', grok: 'conflict', cursor: 'conflict',
+  });
+  assert.equal(result.overall, 'not_ready');
+});
+
+test('projection diagnosticsはbundleと完全一致する実体copyもreadyとする', async (t) => {
+  const home = await mkdtemp(path.join(tmpdir(), 'unai-diagnostics-copy-'));
+  t.after(() => rm(home, { recursive: true, force: true }));
+  const source = path.join(root, 'skills/unai');
+  for (const target of Object.values(harnessSkillTargets(home))) {
+    await mkdir(path.dirname(target), { recursive: true });
+    await cp(source, target, { recursive: true });
+  }
+
+  const run = spawnSync(process.execPath, [path.join(root, 'bin/unai.mjs'),
+    'factory-diagnostics', '--json'], {
+    encoding: 'utf8', env: { ...process.env, HOME: home },
+  });
+  assert.equal(run.status, 0, run.stderr);
+  assert.deepEqual(JSON.parse(run.stdout).checks.skill_projections, {
+    claude: 'ready', codex: 'ready', grok: 'ready', cursor: 'ready',
+  });
+});
+
+test('Codexの公式面とlegacy面が同居すれば同じbundle内容でもconflictになる', async (t) => {
+  const home = await mkdtemp(path.join(tmpdir(), 'unai-diagnostics-codex-duplicate-'));
+  t.after(() => rm(home, { recursive: true, force: true }));
+  const source = path.join(root, 'skills/unai');
+  await projectAllHarnesses(home, source);
+  const legacyTarget = path.join(home, '.codex/skills/unai');
+  await mkdir(path.dirname(legacyTarget), { recursive: true });
+  await cp(source, legacyTarget, { recursive: true });
+
+  const run = spawnSync(process.execPath, [path.join(root, 'bin/unai.mjs'),
+    'factory-diagnostics', '--json'], {
+    encoding: 'utf8', env: { ...process.env, HOME: home },
+  });
+  assert.equal(run.status, 1, run.stderr);
+  assert.equal(JSON.parse(run.stdout).checks.skill_projections.codex, 'conflict');
+
+  if (process.platform !== 'win32') {
+    const install = spawnSync('bash', [path.join(root, 'install.sh')], {
+      encoding: 'utf8', env: { ...process.env, HOME: home },
+    });
+    assert.equal(install.status, 1);
+    assert.doesNotMatch(install.stdout, /完了。4ホスト/u);
+    assert.equal((await lstat(legacyTarget)).isDirectory(), true);
+  }
 });
 
 test('bash installerは隔離HOMEへskillとCLIを冪等配置して外せる', async (t) => {
@@ -83,6 +174,12 @@ test('bash installerは隔離HOMEへskillとCLIを冪等配置して外せる', 
   });
   assert.equal((await lstat(path.join(home, '.codex/skills/unai'))).isSymbolicLink(), true);
   await assert.rejects(lstat(path.join(home, '.agents/skills/unai')), { code: 'ENOENT' });
+  const legacyDiagnostics = JSON.parse(execFileSync(
+    path.join(home, '.local/bin/unai'),
+    ['factory-diagnostics', '--json', '--profile', 'legacy'],
+    { env, encoding: 'utf8' },
+  ));
+  assert.equal(legacyDiagnostics.checks.skill_projections.codex, 'ready');
 
   execFileSync('bash', [path.join(root, 'install.sh')], { env, stdio: 'pipe' });
   assert.equal((await lstat(path.join(home, '.agents/skills/unai'))).isSymbolicLink(), true);
@@ -90,7 +187,7 @@ test('bash installerは隔離HOMEへskillとCLIを冪等配置して外せる', 
 
   const cli = path.join(home, '.local/bin/unai');
   assert.equal((await lstat(cli)).isSymbolicLink(), true);
-  assert.equal(execFileSync(cli, ['--version'], { env, encoding: 'utf8' }), '0.3.0\n');
+  assert.equal(execFileSync(cli, ['--version'], { env, encoding: 'utf8' }), '0.4.0\n');
   execFileSync('bash', [path.join(root, 'install.sh'), '--uninstall'], { env, stdio: 'pipe' });
   assert.equal(spawnSync(cli, ['--version'], { env }).status, null);
 });
@@ -115,7 +212,15 @@ test('bash installerは利用者の実体を保護し、退避後の再実行で
   await writeFile(cli, '利用者のCLI\n');
   const env = { ...process.env, HOME: home };
 
-  execFileSync('bash', [path.join(root, 'install.sh')], { env, stdio: 'pipe' });
+  const blocked = spawnSync('bash', [path.join(root, 'install.sh')], {
+    env, encoding: 'utf8',
+  });
+  assert.equal(blocked.status, 1);
+  assert.match(blocked.stderr, /install projectionがreadyではない/u);
+  const blockedDiagnostics = JSON.parse(blocked.stdout.split('\n')
+    .find((line) => line.startsWith('{"schema":"unai.native_factory_diagnostics.v2"')));
+  assert.equal(blockedDiagnostics.checks.skill_projections.codex, 'conflict');
+  assert.equal(blockedDiagnostics.overall, 'not_ready');
   assert.equal((await lstat(skill)).isSymbolicLink(), false);
   assert.equal(await readFile(path.join(skill, 'owned.txt'), 'utf8'), '利用者の実体\n');
   assert.equal(await readlink(legacySkill), path.join(root, 'skills/unai'));
@@ -179,7 +284,10 @@ test('古いbash installerのuninstallは別versionが張り直した配線を�
     env,
     stdio: 'pipe',
   });
-  execFileSync('bash', [path.join(versionB, 'install.sh')], { env, stdio: 'pipe' });
+  const blockedMigration = spawnSync('bash', [path.join(versionB, 'install.sh')], {
+    env, encoding: 'utf8',
+  });
+  assert.equal(blockedMigration.status, 1);
   assert.equal(await readlink(path.join(home, '.codex/skills/unai')), path.join(versionA, 'skills/unai'));
   await assert.rejects(lstat(path.join(home, '.agents/skills/unai')), { code: 'ENOENT' });
   execFileSync('bash', [path.join(versionA, 'install.sh'), '--uninstall'], {
@@ -222,10 +330,10 @@ test('PowerShell installerは利用者の実体CLIを上書きしない', async 
   await writeFile(cli, '利用者のCLI\n');
   const env = { ...process.env, HOME: home, USERPROFILE: home };
 
-  execFileSync('pwsh', ['-NoProfile', '-File', path.join(root, 'install.ps1')], {
-    env,
-    stdio: 'pipe',
+  const blocked = spawnSync('pwsh', ['-NoProfile', '-File', path.join(root, 'install.ps1')], {
+    env, encoding: 'utf8',
   });
+  assert.equal(blocked.status, 1);
   assert.equal(await readFile(cli, 'utf8'), '利用者のCLI\n');
 
   await rename(cli, cliBackup);
@@ -269,6 +377,47 @@ test('PowerShellの公開一行実行相当はPSScriptRootなしで公式面へ�
   );
 });
 
+test('PowerShell installerはdangling Codex面を修復し、dangling反対面は非0にする', async (t) => {
+  if (process.platform !== 'win32') {
+    t.skip('Windows installer test');
+    return;
+  }
+  const home = await mkdtemp(path.join(tmpdir(), 'unai-install-dangling-'));
+  t.after(() => rm(home, { recursive: true, force: true }));
+  const env = { ...process.env, HOME: home, USERPROFILE: home };
+  const officialTarget = path.join(home, '.agents/skills/unai');
+  const missingOfficialSource = path.join(home, 'missing-official-source');
+  await mkdir(missingOfficialSource, { recursive: true });
+  await mkdir(path.dirname(officialTarget), { recursive: true });
+  await symlink(missingOfficialSource, officialTarget, 'junction');
+  await rm(missingOfficialSource, { recursive: true, force: true });
+
+  execFileSync('pwsh', ['-NoProfile', '-File', path.join(root, 'install.ps1')], {
+    env,
+    stdio: 'pipe',
+  });
+  assert.equal(
+    normalizeWindowsPath(await realpath(officialTarget)),
+    normalizeWindowsPath(await realpath(path.join(root, 'skills/unai'))),
+  );
+
+  const legacyTarget = path.join(home, '.codex/skills/unai');
+  const missingLegacySource = path.join(home, 'missing-legacy-source');
+  await mkdir(missingLegacySource, { recursive: true });
+  await mkdir(path.dirname(legacyTarget), { recursive: true });
+  await symlink(missingLegacySource, legacyTarget, 'junction');
+  await rm(missingLegacySource, { recursive: true, force: true });
+
+  const blocked = spawnSync('pwsh', ['-NoProfile', '-File', path.join(root, 'install.ps1')], {
+    env, encoding: 'utf8',
+  });
+  assert.equal(blocked.status, 1);
+  const diagnostics = JSON.parse(blocked.stdout.split(/\r?\n/u)
+    .find((line) => line.startsWith('{"schema":"unai.native_factory_diagnostics.v2"')));
+  assert.equal(diagnostics.checks.skill_projections.codex, 'conflict');
+  assert.equal((await lstat(legacyTarget)).isSymbolicLink(), true);
+});
+
 test('古いPowerShell installerのuninstallは別versionが張り直した配線を消さない', async (t) => {
   if (process.platform !== 'win32') {
     t.skip('Windows installer test');
@@ -288,10 +437,11 @@ test('古いPowerShell installerのuninstallは別versionが張り直した配�
   execFileSync('pwsh', [
     '-NoProfile', '-File', path.join(versionA, 'install.ps1'), '-Profile', 'legacy',
   ], { env, stdio: 'pipe' });
-  execFileSync('pwsh', ['-NoProfile', '-File', path.join(versionB, 'install.ps1')], {
-    env,
-    stdio: 'pipe',
-  });
+  const blockedMigration = spawnSync(
+    'pwsh', ['-NoProfile', '-File', path.join(versionB, 'install.ps1')],
+    { env, encoding: 'utf8' },
+  );
+  assert.equal(blockedMigration.status, 1);
   assert.equal(
     normalizeWindowsPath(await realpath(path.join(home, '.codex/skills/unai'))),
     versionASkill,
@@ -342,6 +492,9 @@ async function makeInstallerClone(parent, name) {
     cp(path.join(root, 'install.ps1'), path.join(destination, 'install.ps1')),
     cp(path.join(root, 'skills'), path.join(destination, 'skills'), { recursive: true }),
     cp(path.join(root, 'bin'), path.join(destination, 'bin'), { recursive: true }),
+    cp(path.join(root, 'lib'), path.join(destination, 'lib'), { recursive: true }),
+    cp(path.join(root, '.claude-plugin'), path.join(destination, '.claude-plugin'), { recursive: true }),
+    cp(path.join(root, 'package.json'), path.join(destination, 'package.json')),
   ]);
   return destination;
 }
@@ -362,6 +515,22 @@ async function makeDiagnosticsClone(destination) {
     await mkdir(path.dirname(target), { recursive: true });
     await cp(path.join(root, file), target);
   }));
+}
+
+function harnessSkillTargets(home, profile = 'official') {
+  return {
+    claude: path.join(home, '.claude/skills/unai'),
+    codex: path.join(home, profile === 'legacy' ? '.codex/skills/unai' : '.agents/skills/unai'),
+    grok: path.join(home, '.grok/skills/unai'),
+    cursor: path.join(home, '.cursor/skills/unai'),
+  };
+}
+
+async function projectAllHarnesses(home, source, profile = 'official') {
+  for (const target of Object.values(harnessSkillTargets(home, profile))) {
+    await mkdir(path.dirname(target), { recursive: true });
+    await symlink(source, target, process.platform === 'win32' ? 'junction' : 'dir');
+  }
 }
 
 function quotePowerShell(value) {

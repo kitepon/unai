@@ -14,7 +14,7 @@ unai自身が版数、配布物、installer、tag、release履歴を所有する
 2. 変更に対応するfocused testを先に通し、最後に`node --test tests/unai.test.mjs tests/ci-contract.test.mjs`を一度通す。`install.sh`は`bash -n install.sh`、`install.ps1`はPowerShell parserでも確認する。
 3. GitHub ActionsのmacOS・Linux・Windows結果がすべて成功した`main`だけを公開対象にする。
 4. version releaseでは、その`main`上のcommitへ注釈付き`vX.Y.Z` tagを作り、tagとGitHub Releaseを公開する。tag対象が公開`main`の祖先であることを実測してから行う。
-5. 公開後に、最新追従installerによる新規導入または更新、`unai --version`、`unai factory-diagnostics --json`を実行し、利用面まで届いたことを確認する。
+5. 公開後に、最新追従installerによる新規導入または更新、`unai --version`、`unai factory-diagnostics --json`を実行し、Claude Code・Codex・Grok・Cursorの4面がすべて`ready`であることを確認する。
 
 通常の修正は`main`で前進修正する。公開済みの履歴を書き換えず、壊れたversion releaseは修正版の新しい版数とtagで置き換える。
 

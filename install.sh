@@ -141,11 +141,6 @@ install_skill_target() {
   local t="$1"
   local parent
   parent="$(dirname "$t")"
-  # そのホストを使っていない環境（親の親が無い）には作らない
-  if [ ! -d "$(dirname "$parent")" ]; then
-    echo "skip: $t （ホスト未導入）"
-    return
-  fi
   mkdir -p "$parent"
   if [ -e "$t" ] && [ ! -L "$t" ]; then
     echo "skip: $t （実ファイルがあるため上書きしない）"
@@ -160,13 +155,7 @@ for t in "${COMMON_TARGETS[@]}"; do
 done
 
 # Codexは公式面と旧面を同居させない。同じcloneが作った反対面だけは移行時に外す。
-CODEX_HOST_PRESENT=false
-if [ -d "$HOME/.codex" ] || [ -d "$HOME/.agents" ]; then
-  CODEX_HOST_PRESENT=true
-fi
-if ! $CODEX_HOST_PRESENT; then
-  echo "skip: $CODEX_TARGET （Codex未導入）"
-elif [ -e "$CODEX_OPPOSITE" ] || [ -L "$CODEX_OPPOSITE" ]; then
+if [ -e "$CODEX_OPPOSITE" ] || [ -L "$CODEX_OPPOSITE" ]; then
   if owned_symlink "$CODEX_OPPOSITE" "$SKILL_SRC"; then
     if [ -e "$CODEX_TARGET" ] && [ ! -L "$CODEX_TARGET" ]; then
       echo "skip: $CODEX_TARGET （実ファイルがあるため反対profileを保持）"
@@ -185,11 +174,24 @@ else
 fi
 
 mkdir -p "$(dirname "$CLI_TARGET")"
+CLI_CONFLICT=false
 if [ -e "$CLI_TARGET" ] && [ ! -L "$CLI_TARGET" ]; then
   echo "skip: $CLI_TARGET （実ファイルがあるため上書きしない）"
+  CLI_CONFLICT=true
 else
   ln -sfn "$CLI_SRC" "$CLI_TARGET"
   echo "繋いだ: $CLI_TARGET -> $CLI_SRC"
 fi
 
-echo "完了。更新はこの1行の再実行でよい。"
+DIAGNOSTICS_EXIT=0
+if node "$CLI_SRC" factory-diagnostics --json --profile "$PROFILE"; then
+  :
+else
+  DIAGNOSTICS_EXIT=$?
+fi
+if $CLI_CONFLICT || [ "$DIAGNOSTICS_EXIT" -ne 0 ]; then
+  echo "error: unaiのinstall projectionがreadyではない" >&2
+  exit 1
+fi
+
+echo "完了。4ホストのskill projectionはready。更新はこの1行の再実行でよい。"

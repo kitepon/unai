@@ -30,13 +30,18 @@ function Get-NormalizedPath {
   return $fullPath
 }
 
+function Get-PathItem {
+  param([Parameter(Mandatory)][string]$Path)
+  return Get-Item -LiteralPath $Path -Force -ErrorAction SilentlyContinue
+}
+
 function Test-OwnedLink {
   param(
     [Parameter(Mandatory)][string]$Path,
     [Parameter(Mandatory)][string]$ExpectedTarget
   )
-  if (-not (Test-Path -LiteralPath $Path)) { return $false }
-  $item = Get-Item -LiteralPath $Path -Force
+  $item = Get-PathItem -Path $Path
+  if ($null -eq $item) { return $false }
   if ($item.LinkType -notin @('Junction', 'SymbolicLink')) { return $false }
   $target = @($item.Target)[0]
   if (-not $target) { return $false }
@@ -107,15 +112,10 @@ $codexOpposite = if ($Profile -eq 'official') { $legacyCodexTarget } else { $off
 
 function Install-SkillTarget {
   param([Parameter(Mandatory)][string]$Target)
-  $hostRoot = Split-Path -Parent (Split-Path -Parent $Target)
-  if (-not (Test-Path -LiteralPath $hostRoot -PathType Container)) {
-    Write-Output "skip: $Target （ホスト未導入）"
-    return
-  }
   $parent = Split-Path -Parent $Target
   New-Item -ItemType Directory -Path $parent -Force | Out-Null
-  if (Test-Path -LiteralPath $Target) {
-    $item = Get-Item -LiteralPath $Target -Force
+  $item = Get-PathItem -Path $Target
+  if ($null -ne $item) {
     if ($item.LinkType -notin @('Junction', 'SymbolicLink')) {
       Write-Output "skip: $Target （実ファイルがあるため上書きしない）"
       return
@@ -131,17 +131,12 @@ foreach ($target in $commonTargets) {
 }
 
 # Codexの公式面と旧面は同居させない。同じcloneの反対面だけは移行時に外す。
-$codexHostPresent = (
-  (Test-Path -LiteralPath (Join-Path $HOME '.codex') -PathType Container) -or
-  (Test-Path -LiteralPath (Join-Path $HOME '.agents') -PathType Container)
-)
-if (-not $codexHostPresent) {
-  Write-Output "skip: $codexTarget （Codex未導入）"
-} elseif (Test-Path -LiteralPath $codexOpposite) {
+$codexOppositeItem = Get-PathItem -Path $codexOpposite
+if ($null -ne $codexOppositeItem) {
   if (Test-OwnedLink -Path $codexOpposite -ExpectedTarget $skillSource) {
     $targetBlocked = $false
-    if (Test-Path -LiteralPath $codexTarget) {
-      $targetItem = Get-Item -LiteralPath $codexTarget -Force
+    $targetItem = Get-PathItem -Path $codexTarget
+    if ($null -ne $targetItem) {
       $targetBlocked = $targetItem.LinkType -notin @('Junction', 'SymbolicLink')
     }
     if ($targetBlocked) {
@@ -170,8 +165,8 @@ $wrapper = @(
   'exit $LASTEXITCODE'
 ) -join "`n"
 $canWriteCli = $true
-if (Test-Path -LiteralPath $cliTarget) {
-  $cliItem = Get-Item -LiteralPath $cliTarget -Force
+$cliItem = Get-PathItem -Path $cliTarget
+if ($null -ne $cliItem) {
   if ($cliItem.LinkType -in @('Junction', 'SymbolicLink')) {
     Remove-Item -LiteralPath $cliTarget -Force
   } elseif ($cliItem.PSIsContainer) {
@@ -187,4 +182,12 @@ if ($canWriteCli) {
 } else {
   Write-Output "skip: $cliTarget （実ファイルがあるため上書きしない）"
 }
-Write-Output '完了。更新は同じinstallerの再実行でよい。'
+
+& node $cliPath factory-diagnostics --json --profile $Profile
+$diagnosticsExit = $LASTEXITCODE
+if (-not $canWriteCli -or $diagnosticsExit -ne 0) {
+  [Console]::Error.WriteLine('error: unaiのinstall projectionがreadyではない')
+  exit 1
+}
+
+Write-Output '完了。4ホストのskill projectionはready。更新は同じinstallerの再実行でよい。'

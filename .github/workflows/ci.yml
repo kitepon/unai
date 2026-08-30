@@ -18,3 +18,5 @@ jobs:
 
   full:
     uses: ./.github/workflows/product-full-ci.yml
+    with:
+      documentation-command: npm ci --ignore-scripts --no-audit --no-fund && npm run verify:docs

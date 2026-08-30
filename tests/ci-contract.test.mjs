@@ -13,6 +13,10 @@ test('CIは製品repo内の再利用workflowを呼び、Markdown変更も検査�
   const entry = await readFile(path.join(workflowDir, 'ci.yml'), 'utf8');
   assert.match(entry, /uses:\s+\.\/\.github\/workflows\/product-full-ci\.yml/u);
   assert.doesNotMatch(entry, /paths-ignore:/u);
+  assert.match(
+    entry,
+    /documentation-command:\s+npm ci --ignore-scripts --no-audit --no-fund && npm run verify:docs/u,
+  );
 
   const names = await readdir(workflowDir);
   assert.ok(names.includes('product-full-ci.yml'));
@@ -39,8 +43,23 @@ test('製品CIはdotagentsに依存せず、三OSとPowerShell 7を自分で検�
   for (const os of ['ubuntu-latest', 'macos-latest', 'windows-latest']) {
     assert.match(reusable, new RegExp(escapeRegExp(os), 'u'));
   }
-  assert.match(reusable, /shell:\s+pwsh/u);
+  assert.match(
+    reusable,
+    /name:\s+Test product and CI contracts on Windows[\s\S]*?if:\s+runner\.os == 'Windows'[\s\S]*?shell:\s+pwsh[\s\S]*?run:\s+node --test tests\/unai\.test\.mjs tests\/ci-contract\.test\.mjs/u,
+  );
   assert.match(reusable, /HOME="\$test_home" bash install\.sh/u);
+});
+
+test('文書gateは必須入力をclean checkoutで実行する', async () => {
+  const reusable = await readFile(path.join(workflowDir, 'product-full-ci.yml'), 'utf8');
+  assert.match(
+    reusable,
+    /documentation-command:[\s\S]*?required:\s+true[\s\S]*?type:\s+string/u,
+  );
+  assert.match(
+    reusable,
+    /name:\s+Verify product documentation[\s\S]*?DOCUMENTATION_COMMAND:\s+\$\{\{ inputs\.documentation-command \}\}[\s\S]*?bash -euo pipefail -c "\$DOCUMENTATION_COMMAND"/u,
+  );
 });
 
 test('manifestの製品版は一致する', async () => {

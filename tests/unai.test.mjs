@@ -17,7 +17,7 @@ test('versionと4ホストready diagnosticsがmanifestに一致してexit 0に�
   t.after(() => rm(home, { recursive: true, force: true }));
   await projectAllHarnesses(home, path.join(root, 'skills/unai'));
   const cli = path.join(root, 'bin/unai.mjs');
-  assert.equal(execFileSync(process.execPath, [cli, '--version'], { encoding: 'utf8' }), '0.6.0\n');
+  assert.equal(execFileSync(process.execPath, [cli, '--version'], { encoding: 'utf8' }), '0.6.1\n');
   const run = spawnSync(process.execPath, [cli, 'factory-diagnostics', '--json'], {
     encoding: 'utf8', env: homeEnvironment(home),
   });
@@ -26,7 +26,7 @@ test('versionと4ホストready diagnosticsがmanifestに一致してexit 0に�
   const result = JSON.parse(run.stdout);
   assert.deepEqual(result, {
     schema: 'unai.native_factory_diagnostics.v2',
-    product: { name: 'unai', version: '0.6.0' },
+    product: { name: 'unai', version: '0.6.1' },
     checks: {
       manifest_consistency: 'pass',
       node_runtime: 'pass',
@@ -228,7 +228,7 @@ test('bash installerは隔離HOMEへskillとCLIを冪等配置して外せる', 
 
   const cli = path.join(home, '.local/bin/unai');
   assert.equal((await lstat(cli)).isSymbolicLink(), true);
-  assert.equal(execFileSync(cli, ['--version'], { env, encoding: 'utf8' }), '0.6.0\n');
+  assert.equal(execFileSync(cli, ['--version'], { env, encoding: 'utf8' }), '0.6.1\n');
   execFileSync('bash', [path.join(root, 'install.sh'), '--uninstall'], { env, stdio: 'pipe' });
   assert.equal(spawnSync(cli, ['--version'], { env }).status, null);
 });

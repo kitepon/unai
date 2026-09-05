@@ -1,6 +1,6 @@
 {
   "name": "unai",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "日本語の「側」「筋」「ではなく〜」など、AI特有の不自然な言葉遣いを直す。",
   "author": {
     "name": "kitepon"

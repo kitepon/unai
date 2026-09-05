@@ -12,12 +12,12 @@
 
 [日本語](README.md) · **English**
 
-> **Put the writer back into AI-written Japanese.**
-> unai diagnoses fingerprints in Japanese prose written by AI and fixes only the affected passages instead of rewriting the whole piece. It runs on Claude Code, Codex, Grok, and Cursor.
+> **Remove AI-like phrasing from Japanese while keeping the writer's voice.**
+> unai diagnoses unnatural formulaic phrasing in Japanese and makes local edits while preserving content and voice. It runs on Claude Code, Codex, Grok, and Cursor.
 
 Built and maintained by [Quo](https://x.com/QLyun35332) at [kitepon.dev](https://kitepon.dev/en/#systems).
 
-The current release is **unai 0.4.0**.
+The current release is **unai 0.5.0**.
 
 ## In 30 seconds
 
@@ -30,36 +30,25 @@ Write the article following unai.  # apply the rules while writing
 `review` returns evidence with verbatim excerpts. `refactor` changes only the passages it identified,
 preserving the original claims, information, structure, and writer-specific choices.
 
-## Why Japanese needs its own pass
+## What unai changes
 
-English-language de-AI tools target the fingerprints of English AI writing. Japanese prose has different
-vocabulary, syntax, social distance, and emotional cues, so unai's rules are built from Japanese examples
-rather than translated from English rules.
+unai edits formulaic expressions and mechanical repetition that do not fit their context. A word or
+sentence pattern alone is not evidence of a problem. It considers the passage's purpose, audience,
+and voice before making a local change.
 
-| | unai | [sepia](https://github.com/Nanako0129/sepia) | [humanizer](https://github.com/blader/humanizer) |
-|---|---|---|---|
-| Target language | **Japanese** | English | English |
-| Editing method | Diagnose, then make minimal local fixes | Three passes; fiction starts from structure | Remove 35 patterns |
-| Writer's voice | Per-writer voice profile | None | Adjust with style samples |
-| Apply while writing | Yes (`write`) | Yes | No |
+Examples include generic praise or generalities attached to a practical answer, empty contrasts,
+repeated templates unrelated to the content, and grand wording that substitutes for a concrete explanation.
 
-Instead of paraphrase lists, unai works from the root cause: text with no writer in it — averaged style,
-hedged everything, no gaps left for the reader, emotion performed with symbols. It diagnoses the visible
-symptoms and fixes only the offending spots.
+It preserves reasons, conditions, examples, necessary detail, and the writer's voice. Summarizing or
+restructuring requires a request for that work. unai does not prescribe reply length or conversational behavior.
 
-## What counts as a fingerprint (excerpt)
+Cute characters, emotion, humor, metaphors, emoji, and catchphrases are legitimate expression, with or
+without a voice profile. Turning a joyful “やったぁ、できたよっ！ えへへ🌸” into “完了しました。”
+would erase the character's voice and fail unai's purpose.
 
-- Habitual "not X, but Y" framing that spends a line on information-free negation
-- English words and identifiers jammed into Japanese prose (each may be legal; the density kills the text)
-- Insurance prefaces ("to be honest", "actually") before the point
-- Identical paragraph structure in every piece, one emoji per paragraph, uniform hedged endings
-- Formulaic closers ("worth keeping an eye on!")
-- Minimizing phrases and fake humility ("just", "merely") that shrink deliberate work
-- Fabricated first-person experiences the writer never actually reported
-
-Over-correction is also a fingerprint: prose that obeys every rule uniformly is a new kind of absence. unai edits minimally.
-
-Full rules (Japanese): [skills/unai/references/core-pass.md](skills/unai/references/core-pass.md)
+See the [criteria and paired examples](skills/unai/references/core-pass.md) and
+[chat and dialogue examples](skills/unai/references/domains/chat-replies.md), both in Japanese.
+unai is not an AI-authorship detector.
 
 ## Install
 
@@ -153,7 +142,7 @@ unai factory-diagnostics --json
 ```json
 {
   "schema": "unai.native_factory_diagnostics.v2",
-  "product": { "name": "unai", "version": "0.4.0" },
+  "product": { "name": "unai", "version": "0.5.0" },
   "checks": {
     "manifest_consistency": "pass",
     "node_runtime": "pass",
@@ -226,7 +215,16 @@ Locations can vary by host version; if these don't match, check your host's docs
 
 ## Voice profile
 
-De-AI'd text still needs *your* voice. Put your first-person choice, sentence endings, banned words, and allowed looseness in `~/.unai/voice.md` (or per-project `.unai/voice.md`); unai gives it priority over the core rules. Point the profile at real samples of your writing rather than bare rules about endings — a rule alone ("never use polite forms") pushes the AI into a different imitation. See [skills/unai/references/voice-profile.md](skills/unai/references/voice-profile.md).
+A voice profile is optional. Without one, unai still preserves the voice and character specified in
+the text or conversation. Store recurring preferences in `~/.unai/voice.md` or a project's
+`.unai/voice.md`. The current request takes priority; stylistic preferences take precedence over
+general editing criteria. Expressions omitted from a profile remain available.
+
+You can describe the character, relationship, sentence endings, or favorite expressions, and optionally
+provide a writing sample. See [voice-profile.md](skills/unai/references/voice-profile.md).
+
+The [behavioral test cases](tests/prose-cases.md) cover both preserving detail and expressive voices,
+and removing context-inappropriate formulas.
 
 ## License
 

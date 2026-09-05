@@ -1,7 +1,7 @@
 {
   "name": "unai",
-  "version": "0.4.0",
-  "description": "un-AI Japanese writing: strip AI flavor from Japanese text. Diagnose (review), minimally fix (refactor), or apply while writing (write). Core fingerprint rules + per-domain overlays + user voice profiles.",
+  "version": "0.5.0",
+  "description": "日本語の文脈に合わない定型表現や機械的な繰り返しを診断・最小修正する。内容、必要な説明、書き手やキャラクターの声を保ち、執筆時にも適用できる。",
   "author": {
     "name": "kitepon"
   },

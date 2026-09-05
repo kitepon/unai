@@ -5,13 +5,13 @@
   },
   "metadata": {
     "description": "日本語文章からAIっぽさを取り除く校正規範 (un-AI Japanese writing)",
-    "version": "0.4.0"
+    "version": "0.5.0"
   },
   "plugins": [
     {
       "name": "unai",
       "source": "./",
-      "description": "日本語のAI指紋（否定の持ち出し・識別子の密飼い・保険の前置き・型の固定など）を診断し、最小修正し、執筆時に避ける。声の設定（voice profile）で書き手の好みを差し込める。"
+      "description": "日本語の文脈に合わない定型表現や機械的な繰り返しを診断・最小修正する。詳しい説明、感情、比喩、可愛いキャラクターなど、内容と書き手の表現を保つ。"
     }
   ]
 }

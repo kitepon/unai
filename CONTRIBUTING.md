@@ -1,13 +1,11 @@
 # 貢献の仕方
 
-unaiは規範文書のプロジェクトです。コードよりも「日本語のAI指紋の観測」が主な貢献対象になります。
+unaiへの文章規範の提案には、対象の文章と文脈を添えてください。どの表現がなぜ不自然なのかを説明し、同じ表現が自然に働く例も示すと、直す範囲を判断しやすくなります。
 
-- **新しい指紋の報告**: AIが書いた日本語で見つけた癖を、実例（出所は伏せてよい）と一緒にIssueへ。実例のない提案より、実例のある報告を優先します
-- **誤検出の報告**: unaiが人間らしい文章を「AIっぽい」と指摘した例も同じくらい重要です。過剰矯正は新しい指紋、が本プロジェクトの原則なので
-- **規則の追加・変更のPR**: 核（core-pass.md）への追加は「複数の実例で再現する癖」だけを対象にしてください。一度きりの好みは声の設定（voice profile）の領分です
-- インストーラの不具合はIssueへ。OS・ホスト（Claude Code / Codex / Grok / Cursor）を添えてください
+可愛さ、感情、比喩、口癖、詳しい説明が失われた例は、誤修正として報告してください。個人の文体の好みは[声の設定](skills/unai/references/voice-profile.md)で扱い、共通規則にはしません。
 
-コード・installerを変更した場合は、提出前に`node --test tests/unai.test.mjs`を実行してください。
+文章規範を変えた場合は、[動作確認例](tests/prose-cases.md)の依頼を実際に実行し、出力を確認してください。期待する文言がファイルにあることを調べる自動testだけでは、校正の品質は確認できません。
 
-セキュリティに関わる報告（install.shの脆弱性など）は公開Issueへ書かず、
-[SECURITY.md](SECURITY.md) の非公開報告窓口を使ってください。
+挙動、installer、manifest、CIを変更した場合は、対応するfocused testを追加し、`node --test tests/unai.test.mjs tests/ci-contract.test.mjs`を通してください。文書のリンクは`npm run verify:docs`で確認します。
+
+installerの不具合にはOSとホスト（Claude Code / Codex / Grok / Cursor）を添えてください。セキュリティに関わる報告は、[SECURITY.md](SECURITY.md)の非公開窓口を使ってください。

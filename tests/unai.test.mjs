@@ -17,7 +17,7 @@ test('versionと4ホストready diagnosticsがmanifestに一致してexit 0に�
   t.after(() => rm(home, { recursive: true, force: true }));
   await projectAllHarnesses(home, path.join(root, 'skills/unai'));
   const cli = path.join(root, 'bin/unai.mjs');
-  assert.equal(execFileSync(process.execPath, [cli, '--version'], { encoding: 'utf8' }), '0.4.0\n');
+  assert.equal(execFileSync(process.execPath, [cli, '--version'], { encoding: 'utf8' }), '0.5.0\n');
   const run = spawnSync(process.execPath, [cli, 'factory-diagnostics', '--json'], {
     encoding: 'utf8', env: homeEnvironment(home),
   });
@@ -26,7 +26,7 @@ test('versionと4ホストready diagnosticsがmanifestに一致してexit 0に�
   const result = JSON.parse(run.stdout);
   assert.deepEqual(result, {
     schema: 'unai.native_factory_diagnostics.v2',
-    product: { name: 'unai', version: '0.4.0' },
+    product: { name: 'unai', version: '0.5.0' },
     checks: {
       manifest_consistency: 'pass',
       node_runtime: 'pass',
@@ -124,6 +124,38 @@ test('projection diagnosticsはbundleと完全一致する実体copyもreadyと�
   });
 });
 
+test('文章規範の参照文書が古い配布copyを検出し、更新後にreadyへ戻る', async (t) => {
+  const home = await mkdtemp(path.join(tmpdir(), 'unai-prose-update-'));
+  t.after(() => rm(home, { recursive: true, force: true }));
+  const targets = harnessSkillTargets(home);
+  const source = path.join(root, 'skills/unai');
+  const resources = [
+    'SKILL.md',
+    'references/core-pass.md',
+    'references/domains/chat-replies.md',
+    'references/voice-profile.md',
+  ];
+  const entries = Object.entries(targets);
+  for (const [index, [, target]] of entries.entries()) {
+    await mkdir(path.dirname(target), { recursive: true });
+    await cp(source, target, { recursive: true });
+    await writeFile(path.join(target, resources[index]), '旧版の文章規範\n');
+  }
+  const cli = path.join(root, 'bin/unai.mjs');
+  const options = { encoding: 'utf8', env: homeEnvironment(home) };
+  const before = spawnSync(process.execPath, [cli, 'factory-diagnostics', '--json'], options);
+  assert.equal(before.status, 1, before.stderr);
+  assert.deepEqual(JSON.parse(before.stdout).checks.skill_projections, {
+    claude: 'stale', codex: 'stale', grok: 'stale', cursor: 'stale',
+  });
+  for (const [index, [, target]] of entries.entries()) {
+    await cp(path.join(source, resources[index]), path.join(target, resources[index]));
+  }
+  const after = spawnSync(process.execPath, [cli, 'factory-diagnostics', '--json'], options);
+  assert.equal(after.status, 0, after.stderr);
+  assert.equal(JSON.parse(after.stdout).overall, 'ready');
+});
+
 test('Codexの公式面とlegacy面が同居すれば同じbundle内容でもconflictになる', async (t) => {
   const home = await mkdtemp(path.join(tmpdir(), 'unai-diagnostics-codex-duplicate-'));
   t.after(() => rm(home, { recursive: true, force: true }));
@@ -187,7 +219,7 @@ test('bash installerは隔離HOMEへskillとCLIを冪等配置して外せる', 
 
   const cli = path.join(home, '.local/bin/unai');
   assert.equal((await lstat(cli)).isSymbolicLink(), true);
-  assert.equal(execFileSync(cli, ['--version'], { env, encoding: 'utf8' }), '0.4.0\n');
+  assert.equal(execFileSync(cli, ['--version'], { env, encoding: 'utf8' }), '0.5.0\n');
   execFileSync('bash', [path.join(root, 'install.sh'), '--uninstall'], { env, stdio: 'pipe' });
   assert.equal(spawnSync(cli, ['--version'], { env }).status, null);
 });

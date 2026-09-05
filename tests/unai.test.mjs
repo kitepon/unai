@@ -17,7 +17,7 @@ test('versionと4ホストready diagnosticsがmanifestに一致してexit 0に�
   t.after(() => rm(home, { recursive: true, force: true }));
   await projectAllHarnesses(home, path.join(root, 'skills/unai'));
   const cli = path.join(root, 'bin/unai.mjs');
-  assert.equal(execFileSync(process.execPath, [cli, '--version'], { encoding: 'utf8' }), '0.5.0\n');
+  assert.equal(execFileSync(process.execPath, [cli, '--version'], { encoding: 'utf8' }), '0.6.0\n');
   const run = spawnSync(process.execPath, [cli, 'factory-diagnostics', '--json'], {
     encoding: 'utf8', env: homeEnvironment(home),
   });
@@ -26,7 +26,7 @@ test('versionと4ホストready diagnosticsがmanifestに一致してexit 0に�
   const result = JSON.parse(run.stdout);
   assert.deepEqual(result, {
     schema: 'unai.native_factory_diagnostics.v2',
-    product: { name: 'unai', version: '0.5.0' },
+    product: { name: 'unai', version: '0.6.0' },
     checks: {
       manifest_consistency: 'pass',
       node_runtime: 'pass',
@@ -64,6 +64,21 @@ test('skill bundle欠損はCLI実起動でnot_ready JSONとexit 1になる', asy
   const result = JSON.parse(run.stdout);
   assert.equal(result.checks.skill_bundle, 'fail');
   assert.equal(result.overall, 'not_ready');
+});
+
+test('文章の配布物はSKILL.md一枚でreadyになる', async (t) => {
+  const fixture = await mkdtemp(path.join(tmpdir(), 'unai-single-skill-'));
+  t.after(() => rm(fixture, { recursive: true, force: true }));
+  await makeDiagnosticsClone(fixture);
+  const source = path.join(fixture, 'skills/unai');
+  await mkdir(source, { recursive: true });
+  await cp(path.join(root, 'skills/unai/SKILL.md'), path.join(source, 'SKILL.md'));
+  const home = path.join(fixture, 'home');
+  await projectAllHarnesses(home, source);
+  const run = spawnSync(process.execPath, [path.join(fixture, 'bin/unai.mjs'),
+    'factory-diagnostics', '--json'], { encoding: 'utf8', env: homeEnvironment(home) });
+  assert.equal(run.status, 0, run.stderr);
+  assert.equal(JSON.parse(run.stdout).overall, 'ready');
 });
 
 test('不正引数はJSONを出さずusageとexit 2を返す', () => {
@@ -124,22 +139,16 @@ test('projection diagnosticsはbundleと完全一致する実体copyもreadyと�
   });
 });
 
-test('文章規範の参照文書が古い配布copyを検出し、更新後にreadyへ戻る', async (t) => {
+test('SKILL.mdが古い配布copyを検出し、更新後にreadyへ戻る', async (t) => {
   const home = await mkdtemp(path.join(tmpdir(), 'unai-prose-update-'));
   t.after(() => rm(home, { recursive: true, force: true }));
   const targets = harnessSkillTargets(home);
   const source = path.join(root, 'skills/unai');
-  const resources = [
-    'SKILL.md',
-    'references/core-pass.md',
-    'references/domains/chat-replies.md',
-    'references/voice-profile.md',
-  ];
   const entries = Object.entries(targets);
-  for (const [index, [, target]] of entries.entries()) {
+  for (const [, target] of entries) {
     await mkdir(path.dirname(target), { recursive: true });
     await cp(source, target, { recursive: true });
-    await writeFile(path.join(target, resources[index]), '旧版の文章規範\n');
+    await writeFile(path.join(target, 'SKILL.md'), '旧版の文章規範\n');
   }
   const cli = path.join(root, 'bin/unai.mjs');
   const options = { encoding: 'utf8', env: homeEnvironment(home) };
@@ -148,8 +157,8 @@ test('文章規範の参照文書が古い配布copyを検出し、更新後にr
   assert.deepEqual(JSON.parse(before.stdout).checks.skill_projections, {
     claude: 'stale', codex: 'stale', grok: 'stale', cursor: 'stale',
   });
-  for (const [index, [, target]] of entries.entries()) {
-    await cp(path.join(source, resources[index]), path.join(target, resources[index]));
+  for (const [, target] of entries) {
+    await cp(path.join(source, 'SKILL.md'), path.join(target, 'SKILL.md'));
   }
   const after = spawnSync(process.execPath, [cli, 'factory-diagnostics', '--json'], options);
   assert.equal(after.status, 0, after.stderr);
@@ -219,7 +228,7 @@ test('bash installerは隔離HOMEへskillとCLIを冪等配置して外せる', 
 
   const cli = path.join(home, '.local/bin/unai');
   assert.equal((await lstat(cli)).isSymbolicLink(), true);
-  assert.equal(execFileSync(cli, ['--version'], { env, encoding: 'utf8' }), '0.5.0\n');
+  assert.equal(execFileSync(cli, ['--version'], { env, encoding: 'utf8' }), '0.6.0\n');
   execFileSync('bash', [path.join(root, 'install.sh'), '--uninstall'], { env, stdio: 'pipe' });
   assert.equal(spawnSync(cli, ['--version'], { env }).status, null);
 });
@@ -538,9 +547,6 @@ async function makeDiagnosticsClone(destination) {
     'package.json',
     'bin/unai.mjs',
     'lib/diagnostics.mjs',
-    'skills/unai/SKILL.md',
-    'skills/unai/references/core-pass.md',
-    'skills/unai/references/voice-profile.md',
   ];
   await Promise.all(files.map(async (file) => {
     const target = path.join(destination, file);

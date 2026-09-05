@@ -12,12 +12,12 @@
 
 **日本語** · [English](README.en.md)
 
-> **書き手の声はそのままに、日本語のAIっぽさを取り除く。**
-> unaiは、日本語の不自然な定型表現を診断し、内容と書き手の声を保って最小修正するagent skillです。Claude Code、Codex、Grok、Cursorで動きます。
+> **日本語のAI特有の言葉遣いを直す。**
+> unaiは「側」「筋」「ではなく〜」などの不自然な使い方を直すagent skillです。Claude Code、Codex、Grok、Cursorで動きます。
 
 [kitepon.dev](https://kitepon.dev/#systems)所属の[クオ](https://x.com/QLyun35332)が開発・運営しています。
 
-現在のreleaseは **unai 0.5.0** です。
+現在のreleaseは **unai 0.6.0** です。
 
 ## 30秒でできること
 
@@ -27,29 +27,12 @@
 記事を書いて。unaiに従って     # 執筆時から規範を適用する
 ```
 
-`review`は根拠と逐語引用を返し、`refactor`は指摘した箇所だけを直します。全文を別の文章へ
-作り替えないので、元の主張、情報、構成、書き手の癖を残せます。
+`review`は指摘、`refactor`は該当する言葉遣いの修正、`write`は執筆時の適用です。
 
-## 何を直すのか
+## 対象
 
-unaiが扱うのは、文脈に合わない定型表現や機械的な繰り返しです。単語や文型を見つけただけで
-「AIっぽい」と判定せず、その文章で何を伝えているかを見て、該当箇所を直します。
-
-- 手順を聞かれた返答に付いた、話題と結びつかない称賛や一般論
-- 実際には対立していないものを強調する対比や、内容が増えない言い直し
-- 内容に関係なく繰り返される前置き、列挙、まとめ
-- 具体的な説明の代わりに置かれた、大げさで意味の曖昧な言葉
-
-理由、条件、具体例、必要な説明と、書き手の声を保ちます。要約や構成変更は依頼された場合に行い、
-返答の行数や会話の進め方は決めません。
-
-可愛いキャラクター、感情、冗談、比喩、絵文字、口癖も、その人らしさを伝える表現です。
-設定がなくても残します。たとえば、喜ぶ台詞の「やったぁ、できたよっ！ えへへ🌸」を
-「完了しました。」に直すのは、unaiの目的に反します。
-
-判断基準と、直す例・残す例は [core-pass.md](skills/unai/references/core-pass.md)、
-返答や台詞の例は [chat-replies.md](skills/unai/references/domains/chat-replies.md) を参照してください。
-AIが書いたかどうかを検出する製品ではありません。
+「実装の側で直す」→「実装を直す」、「その筋で進める」→「その方針で進める」など、
+AI特有の不自然な言葉遣いを直します。文章への指示は [SKILL.md](skills/unai/SKILL.md) の全文がすべてです。
 
 ## インストール
 
@@ -150,7 +133,7 @@ unai factory-diagnostics --json
 ```json
 {
   "schema": "unai.native_factory_diagnostics.v2",
-  "product": { "name": "unai", "version": "0.5.0" },
+  "product": { "name": "unai", "version": "0.6.0" },
   "checks": {
     "manifest_consistency": "pass",
     "node_runtime": "pass",
@@ -179,7 +162,7 @@ top-level fieldは`schema`、`product`、`checks`、`overall`の4つだけです
 
 - `manifest_consistency`: plugin manifestとmarketplace manifestの名前・版数・sourceが一致している
 - `node_runtime`: 実行中のNode.jsが`package.json`の`engines.node`（現在は`>=22.13`）を満たす
-- `skill_bundle`: 配布に必要なskill本体と参照文書を読める
+- `skill_bundle`: 配布するSKILL.mdを読める
 - `skill_projections`: Claude Code、Codex、Grok、Cursorの配置先が現在のbundleを使っている
 
 projectionは、この製品bundleを直接指すsymlink／junction、または内容が完全一致するdirectory copyだけが`ready`です。配置先がなければ`missing`、実体directoryの内容が古いかdangling linkなら`stale`、通常file、別bundleへのlink、Codexの公式面とlegacy面の同居は`conflict`です。絶対pathはJSONへ出しません。
@@ -209,7 +192,7 @@ AIからも呼べます。文章を書く作業の中で「unaiに従う」と�
 3. **全部に常時**: ホストの共通指示に同じ1行を足すと、そのAIの全ての文章仕事に効きます
 
 ```
-文章・返答の文体はunai skillの規範に従う。
+文章・返答のAI特有の言葉遣いはunai skillで直す。
 ```
 
 1行を書く場所（ホスト別）:
@@ -222,44 +205,6 @@ AIからも呼べます。文章を書く作業の中で「unaiに従う」と�
 | Cursor | `AGENTS.md` または `.cursor/rules/` | `~/.cursor/rules/` の規則ファイル |
 
 置き場はホストの版によって変わることがあります。合わない場合は、そのホストの説明書で「指示ファイル／ルールファイル」の場所を確認してください。
-
-## 声の設定（voice profile）
-
-声の設定は任意です。設定がなくても、原文や会話で指定された口調・キャラクターを保ちます。繰り返し使う好みは `~/.unai/voice.md`（プロジェクト固有なら `.unai/voice.md`）に書けます。現在の依頼を優先し、文体の好みは一般的な判断基準より優先します。
-
-```markdown
-# 私の声
-- 一人称は「俺」。読者へ向けた告知は「です・ます」基調で、
-  文体は自分の過去の投稿を手本にする。
-- 読者は技術に詳しくない人も含む。専門用語は日本語の動きで説明する。
-- 軽い冗談は可。
-```
-
-一人称、相手との関係、好きな表現や実際の文章を手本として添えてもよいでしょう。書いていない表現が禁止になることはありません。書き方の詳細は [skills/unai/references/voice-profile.md](skills/unai/references/voice-profile.md)。
-
-## 仕組み
-
-```mermaid
-flowchart LR
-    A[対象の文章] --> B{操作}
-    B -->|review| C[診断だけ<br>逐語引用つきで指摘]
-    B -->|refactor| D[該当箇所だけ最小修正]
-    B -->|write| E[依頼された内容と声で執筆]
-    F[文脈に照らした判断基準] --> B
-    G[返答・台詞の具体例] --> B
-    H[声の設定 voice.md<br>任意の文体設定] -->|文体の好みを反映| B
-```
-
-## 構成
-
-- `skills/unai/SKILL.md` — 操作（review / refactor / write）と手順
-- `skills/unai/references/core-pass.md` — 文脈に照らす判断基準と対になる例
-- `skills/unai/references/domains/chat-replies.md` — 返答・台詞で直す例と残す例
-- `skills/unai/references/voice-profile.md` — 声の設定の書き方
-- `AGENTS.md` — 製品の所有境界と文書管理
-- `RELEASE.md` — リリースと版固定による復旧の契約
-
-文章規範の変更に使う[動作確認例](tests/prose-cases.md)には、説明・感情・キャラクターを保つ場合と、定型表現を直す場合の両方を含めています。
 
 ## ライセンス
 

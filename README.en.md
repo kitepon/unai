@@ -12,12 +12,12 @@
 
 [日本語](README.md) · **English**
 
-> **Remove AI-like phrasing from Japanese while keeping the writer's voice.**
-> unai diagnoses unnatural formulaic phrasing in Japanese and makes local edits while preserving content and voice. It runs on Claude Code, Codex, Grok, and Cursor.
+> **Fix unnatural AI-style wording in Japanese.**
+> unai edits unnatural uses of expressions such as 「側」, 「筋」, and 「ではなく〜」. It runs on Claude Code, Codex, Grok, and Cursor.
 
 Built and maintained by [Quo](https://x.com/QLyun35332) at [kitepon.dev](https://kitepon.dev/en/#systems).
 
-The current release is **unai 0.5.0**.
+The current release is **unai 0.6.0**.
 
 ## In 30 seconds
 
@@ -27,28 +27,12 @@ The current release is **unai 0.5.0**.
 Write the article following unai.  # apply the rules while writing
 ```
 
-`review` returns evidence with verbatim excerpts. `refactor` changes only the passages it identified,
-preserving the original claims, information, structure, and writer-specific choices.
+`review` identifies wording issues, `refactor` fixes them, and `write` applies the skill while writing.
 
-## What unai changes
+## Scope
 
-unai edits formulaic expressions and mechanical repetition that do not fit their context. A word or
-sentence pattern alone is not evidence of a problem. It considers the passage's purpose, audience,
-and voice before making a local change.
-
-Examples include generic praise or generalities attached to a practical answer, empty contrasts,
-repeated templates unrelated to the content, and grand wording that substitutes for a concrete explanation.
-
-It preserves reasons, conditions, examples, necessary detail, and the writer's voice. Summarizing or
-restructuring requires a request for that work. unai does not prescribe reply length or conversational behavior.
-
-Cute characters, emotion, humor, metaphors, emoji, and catchphrases are legitimate expression, with or
-without a voice profile. Turning a joyful “やったぁ、できたよっ！ えへへ🌸” into “完了しました。”
-would erase the character's voice and fail unai's purpose.
-
-See the [criteria and paired examples](skills/unai/references/core-pass.md) and
-[chat and dialogue examples](skills/unai/references/domains/chat-replies.md), both in Japanese.
-unai is not an AI-authorship detector.
+For example, 「実装の側で直す」 becomes 「実装を直す」, and 「その筋で進める」 becomes
+「その方針で進める」. All writing instructions are contained in [SKILL.md](skills/unai/SKILL.md).
 
 ## Install
 
@@ -142,7 +126,7 @@ unai factory-diagnostics --json
 ```json
 {
   "schema": "unai.native_factory_diagnostics.v2",
-  "product": { "name": "unai", "version": "0.5.0" },
+  "product": { "name": "unai", "version": "0.6.0" },
   "checks": {
     "manifest_consistency": "pass",
     "node_runtime": "pass",
@@ -171,7 +155,7 @@ The only top-level fields are `schema`, `product`, `checks`, and `overall`.
 
 - `manifest_consistency`: the names, versions, and source in the plugin and marketplace manifests agree
 - `node_runtime`: the running Node.js satisfies `package.json`'s `engines.node` (currently `>=22.13`)
-- `skill_bundle`: the distributed skill and its required references are readable
+- `skill_bundle`: the distributed SKILL.md is readable
 - `skill_projections`: the Claude Code, Codex, Grok, and Cursor destinations use the current bundle
 
 A direct symlink or junction to this product bundle is `ready`; so is a directory copy whose contents match the bundle exactly. A missing destination is `missing`, an outdated real directory or dangling link is `stale`, and a regular file, link to another bundle, or coexistence of the official and legacy Codex surfaces is `conflict`. Absolute paths are not emitted.
@@ -199,7 +183,7 @@ Choose how broadly it applies:
 3. **Always-on everywhere**: add the same line to the host's global instructions
 
 ```
-文章・返答の文体はunai skillの規範に従う。
+文章・返答のAI特有の言葉遣いはunai skillで直す。
 ```
 
 Where the line goes, per host:
@@ -212,19 +196,6 @@ Where the line goes, per host:
 | Cursor | `AGENTS.md` or `.cursor/rules/` | a rules file under `~/.cursor/rules/` |
 
 Locations can vary by host version; if these don't match, check your host's docs for its instruction/rules file location.
-
-## Voice profile
-
-A voice profile is optional. Without one, unai still preserves the voice and character specified in
-the text or conversation. Store recurring preferences in `~/.unai/voice.md` or a project's
-`.unai/voice.md`. The current request takes priority; stylistic preferences take precedence over
-general editing criteria. Expressions omitted from a profile remain available.
-
-You can describe the character, relationship, sentence endings, or favorite expressions, and optionally
-provide a writing sample. See [voice-profile.md](skills/unai/references/voice-profile.md).
-
-The [behavioral test cases](tests/prose-cases.md) cover both preserving detail and expressive voices,
-and removing context-inappropriate formulas.
 
 ## License
 

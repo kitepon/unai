@@ -67,7 +67,7 @@ test('文書gateはreference link切れを検出する', async (context) => {
 
 test('repoの現行文書は相対targetが閉じている', () => {
   const result = verifyDocs(root);
-  assert.ok(result.markdownCount >= 10);
+  assert.ok(result.markdownCount > 0);
   assert.ok(result.relativeTargetCount > 0);
   assert.deepEqual(result.errors, []);
 });

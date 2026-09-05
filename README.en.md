@@ -1,7 +1,5 @@
 <p align="center">
-  <img src=".github/og.png" alt="unai — a nocturnal print workshop where only the affected passages are repaired and the writer's voice returns" width="100%">
-  <br>
-  <sub><em>This world represents finding only the affected passages among uniform machine-made prose and returning the writer's own voice.</em></sub>
+  <img src=".github/og.png" alt="unai — a print workshop at night" width="100%">
 </p>
 
 # unai
@@ -24,15 +22,26 @@ The current release is **unai 0.6.1**.
 ```text
 /unai review draft.md      # diagnose; do not edit the text
 /unai refactor draft.md    # make only the necessary local fixes
-Write the article following unai.  # apply the rules while writing
+Write the article following unai.  # apply wording corrections while writing
 ```
 
 `review` identifies wording issues, `refactor` fixes them, and `write` applies the skill while writing.
 
 ## Scope
 
-For example, 「実装の側で直す」 becomes 「実装を直す」, and 「その筋で進める」 becomes
-「その方針で進める」. All writing instructions are contained in [SKILL.md](skills/unai/SKILL.md).
+unai fixes unnatural AI-style Japanese wording only where it occurs.
+
+| Before | Example correction |
+|---|---|
+| 実装の側で直す | 実装を直す |
+| その筋で進める | その方針で進める |
+| 指示ではなく会話する | 会話する |
+| 地味に便利 | 便利 |
+| 修正は1行。 | 直すのは1行で済んだ。 |
+
+It also covers unexplained foreign terms, empty prefatory disclaimers, unintended belittling or framing results as accidental, forced emphasis, and decorative wording in explanations. Words used in their ordinary sense and negation needed to distinguish meanings are left intact.
+
+All writing instructions are contained in the single [SKILL.md](skills/unai/SKILL.md) file.
 
 ## Install
 
@@ -201,8 +210,8 @@ Locations can vary by host version; if these don't match, check your host's docs
 
 MIT
 
-Maintainer contracts: [product and documentation ownership](AGENTS.md), [release and rollback](RELEASE.md).
+For contributors: [product and documentation ownership](AGENTS.md), [contributing](CONTRIBUTING.md), [release and rollback](RELEASE.md).
 
 ## Support and security
 
-Use [GitHub Issues](https://github.com/kitepon/unai/issues) for usage questions and bug reports. Do not disclose vulnerabilities in a public issue; follow the [security policy](SECURITY.md) instead.
+Read the [support guide](SUPPORT.md) and use [GitHub Issues](https://github.com/kitepon/unai/issues) for usage questions and bug reports. Do not disclose vulnerabilities in a public issue; follow the [security policy](SECURITY.md) instead.

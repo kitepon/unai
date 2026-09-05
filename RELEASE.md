@@ -8,6 +8,10 @@ unai自身が版数、配布物、installer、tag、release履歴を所有する
 - `vX.Y.Z` tagは、その版を固定する不変の復旧点である。公開後のtagを別commitへ動かしたり、同じ版数を作り直したりしない。
 - `main`向けinstaller自体は版を固定しない。tag付きURLからinstallerだけを取得しても、そのinstallerは既定では`main`をcloneするため、rollbackにはならない。
 
+## 文書だけの更新
+
+利用案内の変更は日英READMEへ同じ事実を反映し、`npm run verify:docs`と`git diff --check`を通してコミット・プッシュする。既存仕様の説明だけを更新する場合は、公開済みの版数とtagを保つ。文章への指示を変更する場合は`skills/unai/SKILL.md`を更新し、以下のversion release手順に従う。
+
 ## release手順
 
 1. `.claude-plugin/plugin.json`と`.claude-plugin/marketplace.json`の版数を一致させ、版数を検証するtestも同じ値へ更新する。

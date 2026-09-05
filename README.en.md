@@ -15,7 +15,7 @@
 
 Built and maintained by [Quo](https://x.com/QLyun35332) at [kitepon.dev](https://kitepon.dev/en/#systems).
 
-The current release is **unai 0.6.1**.
+The current release is **unai 0.6.2**.
 
 ## In 30 seconds
 
@@ -135,7 +135,7 @@ unai factory-diagnostics --json
 ```json
 {
   "schema": "unai.native_factory_diagnostics.v2",
-  "product": { "name": "unai", "version": "0.6.1" },
+  "product": { "name": "unai", "version": "0.6.2" },
   "checks": {
     "manifest_consistency": "pass",
     "node_runtime": "pass",

@@ -15,7 +15,7 @@
 
 [kitepon.dev](https://kitepon.dev/#systems)所属の[クオ](https://x.com/QLyun35332)が開発・運営しています。
 
-現在のreleaseは **unai 0.6.1** です。
+現在のreleaseは **unai 0.6.2** です。
 
 ## 30秒でできること
 
@@ -142,7 +142,7 @@ unai factory-diagnostics --json
 ```json
 {
   "schema": "unai.native_factory_diagnostics.v2",
-  "product": { "name": "unai", "version": "0.6.1" },
+  "product": { "name": "unai", "version": "0.6.2" },
   "checks": {
     "manifest_consistency": "pass",
     "node_runtime": "pass",
